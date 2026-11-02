@@ -2,6 +2,7 @@
 import { createTown, step, explain, holdingCost } from "../engine/town.js";
 import { createPlayer, prices, bagValue, stockUp, spoilNight, seasonTable, planValue, bestTwoMoves } from "../engine/player.js";
 import { SALT_TOWN } from "../rules/town.js";
+import { mysteryRules } from "../engine/mystery.js";
 
 const LOOK = [
   { icon: "🧂", name: "Salt", color: "var(--salt)" },
@@ -36,7 +37,8 @@ function drawDL() {
 }
 
 // ---------------------------------------------------------------- setup
-function variant(kind) {
+function variant(kind, seed) {
+  if (kind === "mystery") return mysteryRules(seed);
   const rules = structuredClone(SALT_TOWN);
   if (kind === "dry") rules.events = [];
   if (kind === "swap") {
@@ -53,9 +55,15 @@ function newSeed() {
   return crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
 }
 
-function startGame(kind = "rain", seed = newSeed()) {
+// Name of the good an event hits, or null while it is still undecided.
+function eventGood(i = 0) {
+  const g = S.town.eventGoods[i];
+  return g >= 0 ? LOOK[g].name.toLowerCase() : null;
+}
+
+function startGame(kind = "mystery", seed = newSeed()) {
   stopPlay();
-  const rules = variant(kind);
+  const rules = variant(kind, seed);
   const town = createTown(rules, seed);
   const player = createPlayer(rules, START_BAG);
   const table = seasonTable(createTown(rules, seed), rules.seasonDays, step);
@@ -63,11 +71,13 @@ function startGame(kind = "rain", seed = newSeed()) {
     kind, seed, rules, town, player, table,
     startValue: bagValue(player, prices(town)),
     lastMoney: -1, lastHolds: town.agents.map((a) => a.holds), lastRot: rules.goods.map(() => 0),
-    log: [],
+    firstBuy: null, log: [],
   };
-  note(`Day 0. You arrive with ${fmt(START_BAG.fish)} fish, ${fmt(START_BAG.rice)} rice and ${fmt(START_BAG.wood)} wood. The town has no money.`);
+  $("place").textContent = rules.name;
+  note(`Day 0. You arrive in ${rules.name} with ${fmt(START_BAG.fish)} fish, ${fmt(START_BAG.rice)} rice and ${fmt(START_BAG.wood)} wood. The town has no money.`);
   const ev = rules.events[0];
-  if (ev) note(`The public calendar says: on day ${ev.day} the rainy season starts and ${LOOK[ev.good].name.toLowerCase()} spoils ${ev.spoil}% a day.`);
+  if (ev && ev.good >= 0) note(`The public calendar says: on day ${ev.day} the rainy season starts and ${LOOK[ev.good].name.toLowerCase()} spoils ${ev.spoil}% a day.`);
+  if (ev && ev.good === -1) note(`The public calendar says: on day ${ev.day} the rains soak whatever good most traders hold on day ${ev.decideDay}. It will then spoil ${ev.spoil}% a day.`);
   $("intro").classList.add("hidden");
   $("end").classList.add("hidden");
   $("game").classList.remove("hidden");
@@ -87,6 +97,7 @@ function buy(good, share) {
   const before = S.player.bag.slice();
   const got = stockUp(S.player, S.town, good, share);
   if (got === 0) return;
+  S.firstBuy ??= { good, day: S.town.day };
   const gave = before.map((b, g) => (g === good ? 0 : b - S.player.bag[g])).map((n, g) => (n > 0 ? `${n} ${LOOK[g].name.toLowerCase()}` : "")).filter(Boolean).join(", ");
   note(`Day ${S.town.day}: swapped ${gave} for <b>${got} ${LOOK[good].name.toLowerCase()}</b>.`);
   render();
@@ -99,8 +110,10 @@ function advance() {
   S.lastRot = spoilNight(S.player, S.town);
   const rot = S.lastRot.map((n, g) => (n > 0 ? `${n} ${LOOK[g].name.toLowerCase()}` : "")).filter(Boolean);
   if (rot.length) note(`Night ${S.town.day}: ${rot.join(", ")} spoiled in your bag.`);
-  const ev = S.rules.events.find((e) => e.day === S.town.day);
-  if (ev) note(`<b>Day ${ev.day}: the rains came.</b> ${LOOK[ev.good].name} now spoils ${ev.spoil}% a day, for everyone.`);
+  S.rules.events.forEach((e, i) => {
+    if (e.good === -1 && e.decideDay === S.town.day) note(`<b>Day ${e.decideDay}: most traders hold ${eventGood(i)}.</b> The rains on day ${e.day} will soak it.`);
+    if (e.day === S.town.day) note(`<b>Day ${e.day}: the rains came.</b> ${LOOK[S.town.eventGoods[i]].name} now spoils ${e.spoil}% a day, for everyone.`);
+  });
   if (report.money !== S.lastMoney) {
     if (report.money === -1) note(`Day ${S.town.day}: ${LOOK[S.lastMoney].name.toLowerCase()} lost its place. The town is bartering again.`);
     else note(`<b>Day ${S.town.day}: ${LOOK[report.money].name} is now the town's money.</b> Nobody declared it.`);
@@ -180,9 +193,13 @@ function render(animate = false) {
 
   const ev = S.rules.events[0];
   const cal = $("calendar");
+  const target = eventGood(0);
+  const left = ev ? ev.day - town.day : 0;
+  const inDays = `<b>${left} day${left === 1 ? "" : "s"}</b> (day ${ev?.day})`;
   if (!ev) cal.textContent = "Public calendar: no rule changes this season.";
-  else if (town.day < ev.day) cal.innerHTML = `Public calendar: rainy season in <b>${ev.day - town.day} day${ev.day - town.day === 1 ? "" : "s"}</b> (day ${ev.day}). From then ${LOOK[ev.good].name.toLowerCase()} spoils ${ev.spoil}% a day.`;
-  else cal.innerHTML = `Rainy season: ${LOOK[ev.good].name.toLowerCase()} now spoils ${ev.spoil}% a day.`;
+  else if (town.day < ev.day && target) cal.innerHTML = `Public calendar: rainy season in ${inDays}. From then ${target} spoils ${ev.spoil}% a day.`;
+  else if (town.day < ev.day) cal.innerHTML = `Public calendar: rainy season in ${inDays}. It soaks whatever good most traders hold on day ${ev.decideDay} (${ev.decideDay - town.day} days from now); that good will spoil ${ev.spoil}% a day.`;
+  else cal.innerHTML = `Rainy season: ${target} now spoils ${ev.spoil}% a day.`;
   cal.classList.toggle("now", !!ev && town.day >= ev.day);
 
   LOOK.forEach((l, g) => {
@@ -287,8 +304,12 @@ function finish() {
   $("best-line").innerHTML = best.moves.length
     ? `Best two moves in this town: ${best.moves.map((m) => `all in ${LOOK[m.to].icon} ${LOOK[m.to].name.toLowerCase()} on day ${m.day}`).join(", then ")}.`
     : "Doing nothing was the best you could do.";
-  const ev = rules.events[0];
-  const heldOld = ev && player.bag[ev.good] * table.price[rules.seasonDays][ev.good] > you / 2;
+  const firstMoney = S.town.history.find((r) => r.money !== -1);
+  const guess = S.firstBuy ? `You first stocked up on ${LOOK[S.firstBuy.good].icon} ${LOOK[S.firstBuy.good].name.toLowerCase()} on day ${S.firstBuy.day}. ` : "You never swapped. ";
+  const picked = firstMoney ? `The town picked ${LOOK[firstMoney.money].icon} ${LOOK[firstMoney.money].name.toLowerCase()} on day ${firstMoney.day}.` : "The town never picked a money.";
+  $("best-line").innerHTML = `${guess}${picked}<br>${$("best-line").innerHTML}`;
+  const wet = S.town.eventGoods[0];
+  const heldOld = wet >= 0 && player.bag[wet] * table.price[rules.seasonDays][wet] > you / 2;
   $("moral").textContent = heldOld
     ? "You kept the old money through the rain. In Growtopia that was holding Diamond Locks in 2017. The difference here: the rain was on a public calendar from day 0, and nobody printed anything."
     : "Money is whatever everyone will take. Here the rules that decide it are public, and nobody can print more of it.";
@@ -305,7 +326,12 @@ async function renderRules() {
     `A trader takes a good she doesn't need only if its worth (how often she saw people take it ÷ holding cost) beats what she holds by more than ${r.trader.doubt}%.`,
     `After each meeting she moves her notebook 1/${2 ** r.trader.memoryShift} of the way towards what the other trader was willing to take.`,
     `${r.market.roundsPerDay} meetings per trader per day. A good is money when ${r.moneyThreshold / 10}% of traders who don't need it would still take it.`,
-    ...r.events.map((e) => `Day ${e.day}: ${LOOK[e.good].name.toLowerCase()} starts to spoil ${e.spoil}% a day.`),
+    ...r.events.map((e) =>
+      e.good === -1
+        ? `Day ${e.day}: the rains soak the good most traders hold on day ${e.decideDay}; it starts to spoil ${e.spoil}% a day.`
+        : `Day ${e.day}: ${LOOK[e.good].name.toLowerCase()} starts to spoil ${e.spoil}% a day.`,
+    ),
+    ...(r.name === "Mystery Town" ? ["This town's spoil rates are one row of a public table of 38 (rules/town.js, MYSTERY), picked by the town seed."] : []),
     `Town seed ${S.seed}: the only randomness is who meets whom. Same seed, same town.`,
   ];
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(r)));
@@ -347,7 +373,8 @@ async function loadChain() {
 // ---------------------------------------------------------------- wiring
 drawDL();
 loadChain();
-$("start").onclick = () => startGame("rain");
+$("start").onclick = () => startGame("mystery");
+$("tutorial").onclick = () => startGame("rain");
 $("play").onclick = togglePlay;
 $("next").onclick = () => { stopPlay(); advance(); };
 $("ff").onclick = () => fastForward(7);

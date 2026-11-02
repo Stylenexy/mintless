@@ -4,3 +4,5 @@ contract/target/
 .env
 .keys/
 dist/
+.dex/
+.claude/

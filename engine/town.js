@@ -25,6 +25,9 @@ export function createTown(rules, seed) {
     rngState: seed >>> 0,
     day: 0,
     spoil: rules.goods.map((g) => g.spoil),
+    // Which good each event hits. An event with good = -1 hits whatever good
+    // most traders hold on its `decideDay` (the rain soaks the town's hoard).
+    eventGoods: rules.events.map((ev) => ev.good),
     agents,
     history: [],
   };
@@ -33,10 +36,19 @@ export function createTown(rules, seed) {
   return town;
 }
 
+export function mostHeld(town) {
+  const count = town.spoil.map(() => 0);
+  for (const ag of town.agents) count[ag.holds]++;
+  let best = 0;
+  for (let g = 1; g < count.length; g++) if (count[g] > count[best]) best = g;
+  return best;
+}
+
 function applyEvents(town) {
-  for (const ev of town.rules.events) {
-    if (ev.day === town.day) town.spoil[ev.good] = ev.spoil;
-  }
+  town.rules.events.forEach((ev, i) => {
+    if (ev.good === -1 && ev.decideDay === town.day) town.eventGoods[i] = mostHeld(town);
+    if (ev.day === town.day && town.eventGoods[i] >= 0) town.spoil[town.eventGoods[i]] = ev.spoil;
+  });
 }
 
 export function holdingCost(town, good) {

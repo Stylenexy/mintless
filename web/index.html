@@ -19,16 +19,19 @@
       <p class="lead">Growtopia's money lost 99.7% of its value. The game kept printing it. I grew up trading in that economy.</p>
       <div id="dl-chart" class="dl-chart" aria-label="Diamond Lock price in rupiah, 2015 to 2026"></div>
       <p class="source">Lowest seller prices per Diamond Lock in Indonesia: blog listings 2015–2018, itemku 2019–2026 (archive.org snapshots).</p>
-      <h2>Salt Town has no money and no printer.</h2>
-      <p class="lead">40 traders barter. Nobody, not even me, can create goods or crown a currency. Watch the town pick its own money, guess it before everyone else, and stock up.</p>
-      <button id="start" class="btn primary big">Enter Salt Town</button>
+      <h2>This town has no money and no printer.</h2>
+      <p class="lead">40 traders barter salt, fish, rice, cloth and wood. Nobody, not even me, can create goods or crown a currency. Every town keeps its goods differently, so the rulebook alone won't tell you which one becomes money. Read the market, guess before everyone else, stock up, and get out before the rains.</p>
+      <div class="row">
+        <button id="start" class="btn primary big">Play a mystery town</button>
+        <button id="tutorial" class="btn big">Tutorial: Salt Town</button>
+      </div>
     </div>
   </section>
 
   <!-- Game -->
   <section id="game" class="screen hidden">
     <header class="topbar glass">
-      <div class="brand">Mintless <span class="sub">Salt Town</span></div>
+      <div class="brand">Mintless <span class="sub" id="place">Salt Town</span></div>
       <div class="day"><span class="label">Day</span> <span id="day" class="mono">0</span><span class="mono dim">/30</span></div>
       <div id="money" class="money">No money yet: pure barter</div>
       <div class="controls">
@@ -98,9 +101,10 @@
     <h3>Change one rule</h3>
     <p class="small">Rules can never be edited inside a running town. A different rule means a different town. Pick one and start it:</p>
     <div class="whatif">
-      <label><input type="radio" name="whatif" value="rain" checked> Rainy season on day 16 (salt spoils 12%/day)</label>
-      <label><input type="radio" name="whatif" value="dry"> No rainy season</label>
-      <label><input type="radio" name="whatif" value="swap"> Salt spoils like cloth, cloth never spoils</label>
+      <label><input type="radio" name="whatif" value="mystery" checked> A new mystery town (spoil rates from the public table)</label>
+      <label><input type="radio" name="whatif" value="rain"> Salt Town: rainy season on day 16 (salt spoils 12%/day)</label>
+      <label><input type="radio" name="whatif" value="dry"> Salt Town without a rainy season</label>
+      <label><input type="radio" name="whatif" value="swap"> Salt Town where salt spoils like cloth and cloth never spoils</label>
     </div>
     <button id="whatif-go" class="btn primary">Start this town</button>
     <h3>Nobody can print</h3>

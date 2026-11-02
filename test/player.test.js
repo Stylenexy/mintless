@@ -45,3 +45,19 @@ test("timing matters: salt early then cloth before the rain beats every one-good
   const best = bestTwoMoves(table, start);
   assert.ok(best.value >= twoMoves);
 });
+
+test("following loses, anticipating wins: buying only after the town crowns a money ends below the start", () => {
+  const start = SALT_TOWN.goods.map((g) => START[g.key] ?? 0);
+  const follower = [];
+  for (let seed = 1; seed <= 20; seed++) {
+    const town = createTown(SALT_TOWN, seed);
+    const table = seasonTable(town, SALT_TOWN.seasonDays, step);
+    const crowned = town.history.findIndex((r) => r.money === 0);
+    const cloth = town.history.findIndex((r) => r.day > 16 && r.money === 3);
+    follower.push(planValue(table, start, [{ day: crowned, to: 0 }, { day: cloth, to: 3 }]));
+    assert.ok(planValue(table, start, [{ day: 0, to: 0 }, { day: 15, to: 3 }]) > 3000, `seed ${seed}`);
+  }
+  follower.sort((a, b) => a - b);
+  console.log(`  follower median over 20 towns: ${follower[10]} (start 600)`);
+  assert.ok(follower[10] < 600);
+});

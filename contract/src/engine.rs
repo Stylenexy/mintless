@@ -37,11 +37,16 @@ pub struct Market {
     pub rounds_per_day: u32,
 }
 
+/// A public rule change. `good = -1` means "the good most traders hold on
+/// `decide_day`" (the rain soaks the town's hoard).
 #[near(serializers = [json, borsh])]
 #[derive(Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Event {
     pub day: u32,
-    pub good: u8,
+    pub good: i32,
+    #[serde(default)]
+    pub decide_day: u32,
     pub spoil: u32,
     pub key: String,
 }
@@ -77,6 +82,8 @@ pub struct Town {
     pub rng_state: u32,
     pub day: u32,
     pub spoil: Vec<u32>,
+    /// Good hit by each event (-1 until decided).
+    pub event_goods: Vec<i32>,
     pub agents: Vec<Agent>,
 }
 
@@ -110,15 +117,37 @@ impl Town {
         }
         near_sdk::require!(agents.len() % 2 == 0, "town needs an even number of traders");
         let spoil = rules.goods.iter().map(|g| g.spoil).collect();
-        let mut town = Town { rules, rng_state: seed, day: 0, spoil, agents };
+        let event_goods = rules.events.iter().map(|e| e.good).collect();
+        let mut town = Town { rules, rng_state: seed, day: 0, spoil, event_goods, agents };
         town.apply_events();
         town
     }
 
+    pub fn most_held(&self) -> i32 {
+        let mut count = vec![0u32; self.spoil.len()];
+        for ag in &self.agents {
+            count[ag.holds as usize] += 1;
+        }
+        let mut best = 0;
+        for g in 1..count.len() {
+            if count[g] > count[best] {
+                best = g;
+            }
+        }
+        best as i32
+    }
+
     fn apply_events(&mut self) {
-        for ev in &self.rules.events {
-            if ev.day == self.day {
-                self.spoil[ev.good as usize] = ev.spoil;
+        for i in 0..self.rules.events.len() {
+            let (day, good, decide_day, spoil) = {
+                let ev = &self.rules.events[i];
+                (ev.day, ev.good, ev.decide_day, ev.spoil)
+            };
+            if good == -1 && decide_day == self.day {
+                self.event_goods[i] = self.most_held();
+            }
+            if day == self.day && self.event_goods[i] >= 0 {
+                self.spoil[self.event_goods[i] as usize] = spoil;
             }
         }
     }
@@ -251,9 +280,9 @@ impl Town {
     /// any day can be computed without running the town).
     pub fn spoil_on(&self, day: u32) -> Vec<u32> {
         let mut spoil: Vec<u32> = self.rules.goods.iter().map(|g| g.spoil).collect();
-        for ev in &self.rules.events {
-            if ev.day <= day {
-                spoil[ev.good as usize] = ev.spoil;
+        for (i, ev) in self.rules.events.iter().enumerate() {
+            if ev.day <= day && self.event_goods[i] >= 0 {
+                spoil[self.event_goods[i] as usize] = ev.spoil;
             }
         }
         spoil
@@ -305,23 +334,38 @@ mod tests {
 
     const FIXTURE: &str = include_str!("../tests/parity.json");
 
+    fn replay(rules: &Rules, run: &Value) {
+        let seed = run["seed"].as_u64().unwrap() as u32;
+        let mut town = Town::new(rules.clone(), seed);
+        for (day, expect) in run["days"].as_array().unwrap().iter().enumerate() {
+            if day > 0 {
+                town.step();
+            }
+            assert_eq!(town.state_hash(), expect["hash"].as_str().unwrap(), "seed {seed} day {day}");
+            let money = expect["money"].as_i64().unwrap() as i32;
+            assert_eq!(town.money(), money, "seed {seed} day {day} money");
+            let prices: Vec<u64> = expect["prices"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
+            assert_eq!(town.prices(), prices, "seed {seed} day {day} prices");
+        }
+        let goods: Vec<i32> = run["eventGoods"].as_array().unwrap().iter().map(|v| v.as_i64().unwrap() as i32).collect();
+        assert_eq!(town.event_goods, goods, "seed {seed} event targets");
+    }
+
     #[test]
     fn rust_engine_matches_javascript_engine_day_by_day() {
         let fx: Value = serde_json::from_str(FIXTURE).unwrap();
         let rules: Rules = serde_json::from_value(fx["rules"].clone()).unwrap();
         for run in fx["runs"].as_array().unwrap() {
-            let seed = run["seed"].as_u64().unwrap() as u32;
-            let mut town = Town::new(rules.clone(), seed);
-            for (day, expect) in run["days"].as_array().unwrap().iter().enumerate() {
-                if day > 0 {
-                    town.step();
-                }
-                assert_eq!(town.state_hash(), expect["hash"].as_str().unwrap(), "seed {seed} day {day}");
-                let money = expect["money"].as_i64().unwrap() as i32;
-                assert_eq!(town.money(), money, "seed {seed} day {day} money");
-                let prices: Vec<u64> = expect["prices"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
-                assert_eq!(town.prices(), prices, "seed {seed} day {day} prices");
-            }
+            replay(&rules, run);
+        }
+    }
+
+    #[test]
+    fn mystery_towns_match_javascript_including_the_rain_on_the_hoard() {
+        let fx: Value = serde_json::from_str(FIXTURE).unwrap();
+        for run in fx["mystery"].as_array().unwrap() {
+            let rules: Rules = serde_json::from_value(run["rules"].clone()).unwrap();
+            replay(&rules, run);
         }
     }
 

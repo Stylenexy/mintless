@@ -53,3 +53,24 @@ export const SALT_TOWN = {
   // Day 16: the rainy season starts and salt turns damp (spoils 12% a day).
   events: [{ day: 16, good: 0, spoil: 12, key: "rain" }],
 };
+
+// MYSTERY TOWNS: identical to Salt Town except two public rules.
+// 1. Each town takes its spoil rates (goods in the order above) from this
+//    table: row = town seed modulo 38. Every row is a shuffle of 1, 2, 3, 8, 20
+//    in which money appears by day 10 and a new one can appear after the rain
+//    (found by scripts/mystery-table.js). The slowest-spoiling good is not
+//    always the winner: who makes what, and who needs what, matters too.
+// 2. On day 16 the rain soaks the good that most traders hold on day 8
+//    (good: -1 means "decided on decideDay"). It then spoils 12% a day.
+export const MYSTERY = {
+  spoilSets: [
+    [1, 2, 3, 8, 20], [1, 3, 8, 20, 2], [1, 3, 20, 2, 8], [1, 3, 20, 8, 2], [1, 8, 2, 3, 20], [1, 8, 3, 2, 20],
+    [1, 8, 3, 20, 2], [1, 20, 3, 8, 2], [2, 1, 3, 8, 20], [2, 1, 3, 20, 8], [2, 1, 8, 3, 20], [2, 1, 20, 3, 8],
+    [2, 3, 8, 20, 1], [2, 3, 20, 1, 8], [2, 8, 1, 3, 20], [2, 20, 1, 8, 3], [3, 2, 20, 1, 8], [3, 8, 2, 1, 20],
+    [3, 8, 20, 1, 2], [3, 8, 20, 2, 1], [3, 20, 2, 1, 8], [3, 20, 2, 8, 1], [3, 20, 8, 1, 2], [3, 20, 8, 2, 1],
+    [8, 1, 3, 20, 2], [8, 2, 1, 3, 20], [8, 2, 1, 20, 3], [8, 2, 3, 20, 1], [8, 3, 2, 20, 1], [8, 3, 20, 2, 1],
+    [8, 20, 1, 2, 3], [8, 20, 2, 1, 3], [20, 1, 2, 3, 8], [20, 1, 8, 3, 2], [20, 2, 1, 8, 3], [20, 2, 8, 1, 3],
+    [20, 3, 8, 2, 1], [20, 8, 2, 1, 3],
+  ],
+  rain: { day: 16, good: -1, decideDay: 8, spoil: 12, key: "rain" },
+};

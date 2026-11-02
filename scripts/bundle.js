@@ -9,7 +9,7 @@ const strip = (src) =>
     .replace(/^import[\s\S]*?from\s+["'][^"']+["'];\s*$/gm, "")
     .replace(/^export\s+(const|function|async function)/gm, "$1");
 
-const modules = ["engine/rng.js", "rules/town.js", "engine/town.js", "engine/player.js", "web/app.js"].map((p) => `// ---- ${p}\n${strip(read(p))}`);
+const modules = ["engine/rng.js", "rules/town.js", "engine/town.js", "engine/player.js", "engine/mystery.js", "web/app.js"].map((p) => `// ---- ${p}\n${strip(read(p))}`);
 const chain = read("web/chain.json");
 const script = modules.join("\n").replace('await (await fetch("./chain.json", { cache: "no-store" })).json()', `(${chain.trim()})`);
 
