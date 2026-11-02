@@ -7,6 +7,10 @@ You play a newcomer: guess which good the town will crown as money, stock up bef
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
 Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a separate project.
 
+![Day 12 in Salt Town: salt is the money, the player went all in on day 0](docs/screenshot.jpg)
+
+*Day 12: 100% of traders now take salt, nobody declared it. The calendar warns that the rains come in 4 days.*
+
 ## Judges: one command
 
 Needs Node 20 or newer. No install, no keys, no account.
@@ -15,7 +19,7 @@ Needs Node 20 or newer. No install, no keys, no account.
 npm run judge
 ```
 
-It runs, in about 5 seconds plus one network round trip:
+It runs, in about 15 seconds:
 
 1. `npm test`: 11 checks over 500 simulated towns (determinism, money emerges, one rule change switches it, controls).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
@@ -95,6 +99,22 @@ Testnet run (`tools/chain-report.txt`): rules hash matched, player joined and sw
 
 Not implemented on purpose: NEP-245 approvals and `*_transfer_call`. Transfers go only to accounts that joined (keeps storage bounded; the contract pays storage).
 
+## Track checklist (Games With Real Economies)
+
+| Track ask | Here |
+|---|---|
+| Economy is the gameplay, evolves without a dev patch | the money is chosen by the traders and changes when a public rule changes; no admin key exists to patch it |
+| Items as NEP-245 multi tokens in one contract | yes, five goods in `mintless-mvznw81o.testnet` |
+| Merchant rules in one readable file, with reasoning | `rules/town.js`; hover any trader in the game to see why it would or would not take each good |
+| Fast-forward mode | `⏩ 7 days` in the game; `tick(days)` on chain (10 days per call) |
+| Loop designed on paper first | see "The game loop" above |
+| Social login, no wallet popups | not built: the browser game needs no wallet at all because it plays locally; the on-chain town is played by `tools/chain.mjs` with throwaway testnet accounts |
+| Judged on the loop, not the token | there is no token to buy; goods only exist inside the town |
+
+## Built during the hackathon
+
+All code in this repository was written on 3 November 2026, during the event (1–14 Nov). The git history shows the order: engine and tests first, then the browser game, then the contract and the testnet run.
+
 ## Honest limits
 
 - The browser game runs the same engine locally; the testnet town is the verifiable copy. Playing the browser game does not sign transactions yet, so there is no wallet popup but also no on-chain bag. Social login is not built.
@@ -124,6 +144,10 @@ npm run test:contract      # 14 Rust tests, including JS/Rust parity
 npm run build:contract
 npm run deploy:testnet     # new throwaway town, played and locked; add -- --keep to lock it live later
 ```
+
+## Team
+
+Dex Bennett (solo), Information Systems student, Universitas Kristen Duta Wacana, Yogyakarta.
 
 ## License
 
