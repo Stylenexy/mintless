@@ -314,8 +314,39 @@ async function renderRules() {
   $("rules-list").innerHTML = items.map((t) => `<li>${t}</li>`).join("");
 }
 
+// ---------------------------------------------------------------- on-chain proof (read-only)
+async function rpcQuery(rpc, params) {
+  const res = await fetch(rpc, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { finality: "final", ...params } }),
+  });
+  const body = await res.json();
+  if (body.error || body.result?.error) throw new Error("rpc error");
+  return body.result;
+}
+
+async function loadChain() {
+  const box = $("chain");
+  try {
+    const cfg = await (await fetch("./chain.json", { cache: "no-store" })).json();
+    const keys = await rpcQuery(cfg.rpc, { request_type: "view_access_key_list", account_id: cfg.contract });
+    const r = await rpcQuery(cfg.rpc, { request_type: "call_function", account_id: cfg.contract, method_name: "town", args_base64: btoa("{}") });
+    const t = JSON.parse(new TextDecoder().decode(new Uint8Array(r.result)));
+    const local = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(SALT_TOWN)));
+    const localHex = [...new Uint8Array(local)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    box.innerHTML = `<b>Live on NEAR testnet:</b> <a href="https://testnet.nearblocks.io/address/${cfg.contract}" target="_blank" rel="noopener">${cfg.contract}</a><br>
+      Access keys on the contract: <b>${keys.keys.length}</b>${keys.keys.length === 0 ? " (nobody can redeploy, upgrade or add a mint)" : ""}<br>
+      Rules hash ${t.rules_hash === localHex ? "matches" : "<b>differs from</b>"} this page's rules · day ${t.day} · money: ${t.money ?? "none yet"} · ${t.players} player(s)<br>
+      The contract has no mint function: supply was fixed at birth and only goes down when goods rot.`;
+  } catch {
+    box.textContent = "Local mode: could not reach the NEAR testnet town right now. The game runs the same engine the tests check.";
+  }
+}
+
 // ---------------------------------------------------------------- wiring
 drawDL();
+loadChain();
 $("start").onclick = () => startGame("rain");
 $("play").onclick = togglePlay;
 $("next").onclick = () => { stopPlay(); advance(); };

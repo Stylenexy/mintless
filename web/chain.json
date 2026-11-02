@@ -1,0 +1,7 @@
+{
+  "network": "testnet",
+  "rpc": "https://rpc.testnet.near.org",
+  "contract": "mintless-mvznw81o.testnet",
+  "seed": 1,
+  "deployed": "2026-11-02T19:40:42.877Z"
+}

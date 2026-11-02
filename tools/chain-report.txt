@@ -1,0 +1,13 @@
+testnet 2026-11-02T19:40:42.876Z
+PASS | throwaway accounts | town=mintless-mvznw81o.testnet player=player-mvznw81o.testnet
+PASS | C01 rules on chain = rules/town.js | sha256 fb68e3e54080e0b7…
+PASS | C02 player joined, starter bag from the chest | bag=0,10,10,0,10
+PASS | C03 swap 10 fish -> salt at town prices | got 9 salt
+PASS | C04 tick: 10 days in one call | gas 7.1 TGas
+PASS | C05 chain town = local JS engine on day 10 | fingerprint 187e93f4, money salt
+PASS | C06 contract locked: zero access keys
+PASS | C07 a stranger advanced the town to day 30 after the lock | money cloth
+PASS | C08 the rain switched the money to cloth, same as local | prices 28,23,67,98,36
+PASS | C09 supply only went down (rot burned), never up | 100000,102000,102000,100000,102000 -> 99992,102000,101992,100000,101991
+
+contract mintless-mvznw81o.testnet

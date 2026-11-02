@@ -1,0 +1,9 @@
+{
+  "name": "mintless-tools",
+  "private": true,
+  "type": "module",
+  "description": "Deploys a Mintless town to NEAR testnet with throwaway accounts, plays it, then deletes the last key.",
+  "dependencies": {
+    "near-api-js": "7.4.0"
+  }
+}
