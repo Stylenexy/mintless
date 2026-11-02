@@ -3,3 +3,4 @@ contract/target/
 *.log
 .env
 .keys/
+dist/
