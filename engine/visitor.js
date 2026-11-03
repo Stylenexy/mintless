@@ -8,7 +8,7 @@
 import { willTake, step } from "./town.js";
 import { spoilNight, prices } from "./player.js";
 
-export const SWAPS_PER_DAY = 4;
+export const SWAPS_PER_DAY = 5;
 export const MAKES_PER_DAY = 2;
 
 // The visitor makes the good that spoils fastest in this town: the hardest
@@ -47,6 +47,13 @@ export function answer(town, agent, give) {
   if (agent.holds === agent.needs) return { yes: false, kind: "keeps" };
   if (give === agent.needs) return { yes: true, kind: "need" };
   return willTake(town, agent, give) ? { yes: true, kind: "money" } : { yes: false, kind: "refuse" };
+}
+
+// Every good this trader would take from the visitor right now.
+export function wantsOf(town, agent) {
+  const out = [];
+  for (let g = 0; g < town.spoil.length; g++) if (answer(town, agent, g).yes) out.push(g);
+  return out;
 }
 
 // Swap one unit of `give` for whatever trader `index` holds.

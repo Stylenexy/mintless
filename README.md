@@ -2,14 +2,14 @@
 
 A tiny market town on NEAR with no currency and no printer. 40 traders barter salt, fish, rice, cloth and wood. Nobody tells them what money is. Within a few days one good becomes the money on its own. Change one public rule, and the town switches to a different money. Nobody, including the developer, can create a single extra unit of anything.
 
-You play trader number 41, a fisher in a pixel market town. Your fish rots fast and your family needs salt every night. On day 1 nobody who has salt wants fish, so you swap your way round the whole town (fish, rice, cloth, wood, salt: four swaps). A few days later a farmer pays you salt for your fish, though farmers never use salt. Nobody announced it: the town has invented money, and you felt it happen.
+You play trader number 41, a fisher in a side-scrolling pixel market town with five districts. Your fish rots fast and your family needs salt every night. Every trader wears a bubble: the goods they take, then the good they give. On day 1 nobody who has salt wants fish, so you trade your way round the whole town (fish, rice, cloth, wood, salt: four trades). A few days later a farmer's bubble reads "fish → salt": farmers never use salt, but they pay with it. Nobody announced it: the town has invented money, and you watched it spread through the bubbles.
 
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
 Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a separate project.
 
-![Day 8 in Salt Town: traders walk around with the goods they hold above their heads; the town's money is salt; the player's errand needs one swap](docs/screenshot.jpg)
+![Day 8 in Salt Town, Rice Fields: the farmer's bubble reads fish then salt, the town news says loggers, weavers and farmers now take salt though they never use it](docs/screenshot.jpg)
 
-*Day 8 in Salt Town. Every trader carries the good they hold above their head, and white salt is everywhere: even traders who never use salt now take it. On day 1 the player's salt took four swaps; today it takes one. Nobody declared salt money.*
+*Day 8, Rice Fields. The farmer next to you will give salt for your fish (gold bubble: your next trade). Farmers further away are holding salt too. On day 1 your salt took four trades; today it takes one. Nobody declared salt money.*
 
 ## Judges: one command
 
@@ -21,7 +21,7 @@ npm run judge
 
 It runs, in about 15 seconds:
 
-1. `npm test`: 24 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player-as-trader rules: swaps never create goods, day 1 needs four swaps, money cuts it to one).
+1. `npm test`: 25 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player-as-trader rules: swaps never create goods, day 1 needs four swaps, money cuts it to one).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
 3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
@@ -86,8 +86,8 @@ Salt Town is the tutorial and the proof: its rules are fixed, so the claims abov
 
 Our first version was a market dashboard (pick a card, press play). Our first playtester did not understand it at all, so we rebuilt the player as a trader inside the town. The old dashboard lives on as the lab page.
 
-- **Every 30 seconds:** walk up to a trader and open the trade window. They show what they hold and what they need; offer one unit from your bag and they answer with exactly the rule they use with each other (`engine/visitor.js` calls the same `willTake`). A gold **!** marks who can move you one step closer to tonight's need, and the errand card shows the shortest chain of swaps from your bag.
-- **Every day:** 4 swaps, then sleep. Your family eats one unit of what you need, your stock spoils at the public rates, you make 2 fresh units, and the 40 traders trade through the night. Each morning the game records how many swaps your need took. Before money that is 4; once salt is money it drops to 1 (a farmer pays salt for fish). When the rains soak salt on day 17, cloth takes over.
+- **Every 30 seconds:** walk (A/D, jump with W) to a trader whose bubble you like and press E. The bubble and the trade window list exactly the goods that trader would take, computed with the rule they use with each other (`wantsOf` in `engine/visitor.js` calls the same `willTake`). A green bubble means you have something they want; a gold one is your next step, and the quest card says it in words ("give fish to a farmer, get rice").
+- **Every day:** up to 5 trades, then sleep. Your family eats one unit of what you need or loses a heart (5 hearts), your stock spoils at the public rates, you make 2 fresh units, and the 40 traders trade through the night. Town news reports when a whole district starts taking a good it never uses. Before money your salt takes 4 trades; once salt is money it takes 1. When the rains soak salt on day 17, cloth takes over.
 - **A season (30 days):** the end screen shows nights fed, savings, and a bar for every morning: height is the swaps you needed, colour is the town's money that day. It is the picture of money being born, used and replaced.
 - **A session:** Salt Town first (the story is fixed and provable), then mystery towns where you play whoever makes the fastest-rotting good and the money cannot be read off the rulebook. The lab page starts towns with one rule changed.
 

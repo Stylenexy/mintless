@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { createTown, willTake } from "../engine/town.js";
 import { SALT_TOWN } from "../rules/town.js";
 import { mysteryRules } from "../engine/mystery.js";
-import { createVisitor, visitorRole, answer, offer, shortestPath, autoTrade, endDay, swapsNeeded, SWAPS_PER_DAY } from "../engine/visitor.js";
+import { createVisitor, visitorRole, answer, offer, shortestPath, autoTrade, endDay, swapsNeeded, wantsOf, SWAPS_PER_DAY } from "../engine/visitor.js";
 
 const SALT = 0, FISH = 1, RICE = 2, CLOTH = 3, WOOD = 4;
 
@@ -31,6 +31,18 @@ test("traders answer the visitor with their own rule", () => {
       if (g === ag.holds) assert.equal(a.kind, "same");
       else assert.equal(a.yes, willTake(town, ag, g));
     }
+  }
+});
+
+test("the bubble lists exactly what a trader would take", () => {
+  const town = createTown(SALT_TOWN, 3);
+  for (let d = 0; d < 6; d++) {
+    for (const ag of town.agents) {
+      const wants = wantsOf(town, ag);
+      for (let g = 0; g < 5; g++) assert.equal(wants.includes(g), answer(town, ag, g).yes);
+      if (ag.holds !== ag.needs) assert.ok(wants.includes(ag.needs), "a trader always takes what they need");
+    }
+    endDay(town, createVisitor(SALT_TOWN, "fisher"));
   }
 });
 
