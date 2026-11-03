@@ -2,14 +2,14 @@
 
 A tiny market town on NEAR with no currency and no printer. 40 traders barter salt, fish, rice, cloth and wood. Nobody tells them what money is. Within a few days one good becomes the money on its own. Change one public rule, and the town switches to a different money. Nobody, including the developer, can create a single extra unit of anything.
 
-You play a newcomer: guess which good the town will crown as money, stock up before everyone else, and get out before the rules turn against you.
+You play trader number 41, a fisher in a pixel market town. Your fish rots fast and your family needs salt every night. On day 1 nobody who has salt wants fish, so you swap your way round the whole town (fish, rice, cloth, wood, salt: four swaps). A few days later a farmer pays you salt for your fish, though farmers never use salt. Nobody announced it: the town has invented money, and you felt it happen.
 
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
 Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a separate project.
 
-![Day 12 in Salt Town: salt is the money, the player went all in on day 0](docs/screenshot.jpg)
+![Day 8 in Salt Town: traders walk around with the goods they hold above their heads; the town's money is salt; the player's errand needs one swap](docs/screenshot.jpg)
 
-*Day 12: 100% of traders now take salt, nobody declared it. The calendar warns that the rains come in 4 days.*
+*Day 8 in Salt Town. Every trader carries the good they hold above their head, and white salt is everywhere: even traders who never use salt now take it. On day 1 the player's salt took four swaps; today it takes one. Nobody declared salt money.*
 
 ## Judges: one command
 
@@ -21,7 +21,7 @@ npm run judge
 
 It runs, in about 15 seconds:
 
-1. `npm test`: 17 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls).
+1. `npm test`: 24 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player-as-trader rules: swaps never create goods, day 1 needs four swaps, money cuts it to one).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
 3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
@@ -41,7 +41,7 @@ PASS | rules hash on chain = sha256(rules/town.js)
 PASS | day 30: chain fingerprint 172d8ea0 = local engine replay; money = cloth
 ```
 
-To play: `npm start`, then open http://localhost:5173 (a season of 30 days takes about two minutes).
+To play: `npm start`, then open http://localhost:5173 (a season of 30 days takes 5 to 10 minutes, or press *Skip 7 days*). No Node? `npm run bundle` writes `dist/mintless.html`, one file that opens in any browser. The old dashboard with the rules, the what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
 
 ## Why this exists
 
@@ -82,15 +82,16 @@ Nothing in the engine mentions any good by name (a test checks this). "Money" is
 
 Salt Town is the tutorial and the proof: its rules are fixed, so the claims above can be checked exactly. The game you play by default is a **mystery town**: same traders, same decision rule, but the spoil rates come from one row of a public table in `rules/town.js` (38 shuffles of 1, 2, 3, 8 and 20 percent a day, all checked to be playable by `scripts/mystery-table.js`), and the rains on day 16 soak whatever good most traders hold on day 8. Who makes what and who needs what matters as much as how fast a good spoils, so the winner cannot be read off the rulebook. On day 3 the price leader already points at the eventual money in about 96% of towns: the skill is reading the market early.
 
-## The game loop (designed on paper first)
+## The game loop
 
-- **Every 30 seconds:** read the market board (price = how tradeable the town believes a good is, plus how many traders would take it), then hold, swap half, or go all in on one good. Your stockpile spoils at the public rates every night.
-- **Every 5 minutes:** one season of 30 days. The calendar says the rains come on day 16 and soak whatever the town hoards on day 8. Get into the future money early while it is cheap, and get out of it before the rain. The end screen tells you which good you backed and on which day, which good the town picked and when, and compares you with "did nothing" and with the best two-move plan for that town.
-- **A session:** play new mystery towns, or open *Rules* and start a town with one rule changed, then watch a different money win.
+Our first version was a market dashboard (pick a card, press play). Our first playtester did not understand it at all, so we rebuilt the player as a trader inside the town. The old dashboard lives on as the lab page.
 
-Example, Salt Town seed 1, starting bag worth 600: doing nothing ends at 170 (it rots), keeping salt through the rain ends at 112, salt on day 0 then cloth on day 15 ends at 3,920. Over 20 Salt Towns, a player who only buys after the town has crowned a money ends with a median of about 490, below the starting 600: following loses, anticipating wins.
+- **Every 30 seconds:** walk up to a trader and open the trade window. They show what they hold and what they need; offer one unit from your bag and they answer with exactly the rule they use with each other (`engine/visitor.js` calls the same `willTake`). A gold **!** marks who can move you one step closer to tonight's need, and the errand card shows the shortest chain of swaps from your bag.
+- **Every day:** 4 swaps, then sleep. Your family eats one unit of what you need, your stock spoils at the public rates, you make 2 fresh units, and the 40 traders trade through the night. Each morning the game records how many swaps your need took. Before money that is 4; once salt is money it drops to 1 (a farmer pays salt for fish). When the rains soak salt on day 17, cloth takes over.
+- **A season (30 days):** the end screen shows nights fed, savings, and a bar for every morning: height is the swaps you needed, colour is the town's money that day. It is the picture of money being born, used and replaced.
+- **A session:** Salt Town first (the story is fixed and provable), then mystery towns where you play whoever makes the fastest-rotting good and the money cannot be read off the rulebook. The lab page starts towns with one rule changed.
 
-No randomness decides your payout, there is no stake, no pool and no real money. Your score depends only on public rules and your timing.
+There is no stake, no pool and no real money. Your score depends only on public rules and your own trades.
 
 ## On chain (NEAR testnet)
 
@@ -137,14 +138,15 @@ All code in this repository was written on 3 November 2026, during the event (1�
 ```
 rules/town.js        the only file that sets the economy (goods, roles, trader rule, calendar, mystery table)
 engine/town.js       the town (pure, integer-only, deterministic)
-engine/player.js     the newcomer: bag, swaps, spoilage, scoring
+engine/visitor.js    the player as trader 41: offers judged by the traders' own rule, shortest swap chain, nights
+engine/player.js     bag spoilage and prices (used by the visitor and the lab page)
 engine/mystery.js    builds a mystery town's rules from its seed
 test/                node:test checks over 500 Salt Towns and 760 mystery towns
 scripts/proof.js     prints the evidence tables
 scripts/mystery-table.js   finds the playable rows of the mystery table
-scripts/bundle.js    builds dist/mintless.html, the whole game in one file
+scripts/bundle.js    builds dist/mintless.html (the game) and dist/mintless-lab.html, one file each
 scripts/verify-chain.js   read-only check of the testnet town
-web/                 the game (plain HTML + ES modules, no build step)
+web/                 the pixel game (index.html, game.js, pixel.js: all art drawn in code) and the lab page (lab.html)
 contract/            NEAR contract (Rust) + parity fixtures
 tools/chain.mjs      deploy to testnet with throwaway accounts, play, delete the last key
 ```
@@ -161,7 +163,7 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 
 - Game, engine, tests and scripts: plain JavaScript on Node.js built-ins, no npm dependencies.
 - Contract: Rust with `near-sdk` 5.30.0. Deploy tool only: `near-api-js` 7.4.0.
-- Fonts: Fraunces, Nunito and JetBrains Mono from Google Fonts.
+- Fonts: Pixelify Sans (game) and Fraunces, Nunito, JetBrains Mono (lab page) from Google Fonts. All pixel art is drawn in code in `web/pixel.js`; no image assets.
 - AI: code and documentation were written with an AI coding assistant (Claude Code), listed here as the hackathon rules ask. Every claim in this README is checked by the commands above.
 
 ## Team

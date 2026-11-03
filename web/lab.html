@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mintless lab</title>
+  <meta name="description" content="A market town where money emerges from barter, and nobody can print it.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./lab.css">
+</head>
+<body>
+  <!-- Intro: why this game exists -->
+  <section id="intro" class="screen">
+    <div class="intro-card glass">
+      <p class="kicker">A true story first</p>
+      <h1>In 2016, one Diamond Lock cost <span class="hl">Rp100,000</span>.<br>This year it costs <span class="hl bad">Rp299</span>.</h1>
+      <p class="lead">Growtopia's money lost 99.7% of its value. The game kept printing it. I grew up trading in that economy.</p>
+      <div id="dl-chart" class="dl-chart" aria-label="Diamond Lock price in rupiah, 2015 to 2026"></div>
+      <p class="source">Lowest seller prices per Diamond Lock in Indonesia: blog listings 2015–2018, itemku 2019–2026 (archive.org snapshots).</p>
+      <h2>This town has no money and no printer.</h2>
+      <p class="lead">40 traders barter salt, fish, rice, cloth and wood. Nobody, not even me, can create goods or crown a currency. Every town keeps its goods differently, so the rulebook alone won't tell you which one becomes money. Read the market, guess before everyone else, stock up, and get out before the rains.</p>
+      <div class="row">
+        <button id="start" class="btn primary big">Play a mystery town</button>
+        <button id="tutorial" class="btn big">Tutorial: Salt Town</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="game" class="screen hidden">
+    <header class="topbar glass">
+      <div class="brand">Mintless <span class="sub" id="place">Salt Town</span></div>
+      <div class="day"><span class="label">Day</span> <span id="day" class="mono">0</span><span class="mono dim">/30</span></div>
+      <div id="money" class="money">No money yet: pure barter</div>
+      <div class="controls">
+        <button id="play" class="btn" title="Play or pause (Space)">▶ Play</button>
+        <button id="next" class="btn" title="Next day (N)">+1 day</button>
+        <button id="ff" class="btn" title="Fast-forward a week (F)">⏩ 7 days</button>
+        <button id="rules-btn" class="btn ghost" title="Rules and proof">Rules</button>
+      </div>
+    </header>
+
+    <div id="calendar" class="calendar"></div>
+
+    <main class="layout">
+      <section class="panel glass market">
+        <h3>Market board <span class="hint">price = how tradeable the town thinks it is</span></h3>
+        <div id="cards" class="cards"></div>
+        <div class="chart-wrap">
+          <svg id="chart" class="chart" viewBox="0 0 600 180" preserveAspectRatio="none" aria-label="Prices over time"></svg>
+        </div>
+      </section>
+
+      <section class="panel glass bag">
+        <h3>Your bag</h3>
+        <div id="bag" class="bag-list"></div>
+        <div class="worth">
+          <div><span class="label">Bag value</span> <span id="value" class="mono big-num">0</span></div>
+          <div id="delta" class="delta mono"></div>
+        </div>
+        <h4>Diary</h4>
+        <ol id="log" class="log"></ol>
+      </section>
+
+      <section class="panel glass square">
+        <h3>Town square <span class="hint">each token shows what a trader holds; hover for their reasoning</span></h3>
+        <div id="town" class="town"></div>
+      </section>
+    </main>
+
+    <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+  </section>
+
+  <!-- End of season -->
+  <section id="end" class="screen hidden">
+    <div class="intro-card glass">
+      <p class="kicker">Season over</p>
+      <h1 id="grade">Grade</h1>
+      <div class="scores">
+        <div><span class="label">You</span><span id="s-you" class="mono big-num"></span></div>
+        <div><span class="label">Did nothing</span><span id="s-idle" class="mono big-num dim"></span></div>
+        <div><span class="label">Best two moves</span><span id="s-best" class="mono big-num dim"></span></div>
+      </div>
+      <p id="best-line" class="lead"></p>
+      <p id="moral" class="lead"></p>
+      <div class="row">
+        <button id="again" class="btn primary big">Play a new town</button>
+        <button id="replay" class="btn big">Same town again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rules and proof drawer -->
+  <aside id="rules" class="drawer glass hidden" aria-label="Rules and proof">
+    <button id="rules-close" class="btn ghost close">Close</button>
+    <h3>The town's rules</h3>
+    <p class="small">Same rules for every trader. No LLM, no hidden dice inside a decision. The only randomness is who meets whom, fixed by the town's seed.</p>
+    <ul id="rules-list" class="rules-list"></ul>
+    <h3>Change one rule</h3>
+    <p class="small">Rules can never be edited inside a running town. A different rule means a different town. Pick one and start it:</p>
+    <div class="whatif">
+      <label><input type="radio" name="whatif" value="mystery" checked> A new mystery town (spoil rates from the public table)</label>
+      <label><input type="radio" name="whatif" value="rain"> Salt Town: rainy season on day 16 (salt spoils 12%/day)</label>
+      <label><input type="radio" name="whatif" value="dry"> Salt Town without a rainy season</label>
+      <label><input type="radio" name="whatif" value="swap"> Salt Town where salt spoils like cloth and cloth never spoils</label>
+    </div>
+    <button id="whatif-go" class="btn primary">Start this town</button>
+    <h3>Nobody can print</h3>
+    <div id="chain" class="small chain">Local mode: this town runs in your browser with the same engine the tests check. On-chain proof shows here once a NEAR testnet town is linked.</div>
+  </aside>
+
+  <script type="module" src="./lab.js"></script>
+</body>
+</html>
