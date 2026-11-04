@@ -2,142 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <title>Mintless</title>
-  <meta name="description" content="A block island with no coins and no printer, where money is born from barter.">
+  <meta name="description" content="Shipwrecked on an island with no coins. Fish, barter, rebuild your boat, and guess what the island will use as money next.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-  <!-- Digits only: Pixelify's 2 reads as 8 and its 1 as 7 at small sizes. -->
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&text=0123456789&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Lilita+One&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./game.css">
   <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
   <div class="stage" id="stage">
-    <canvas id="world" aria-label="A block island with a river, five villages and your home."></canvas>
+    <canvas id="world" aria-label="A soft painted island with five villages, a river and a wrecked boat."></canvas>
+    <div class="flash" id="flash"></div>
+    <div class="vignette"></div>
+    <div id="bubbles" class="bubbles" aria-hidden="true"></div>
+    <div id="pops" class="pops" aria-hidden="true"></div>
 
-    <header class="hud-top">
-      <div class="chip">Day <b id="day">1</b><span class="dim">/30</span></div>
-      <div class="chip money" id="money-chip"><span class="dim">Town money</span> <b id="money">none yet</b></div>
-      <div class="chip" id="worth-chip"><span class="dim">Savings worth</span> <b id="worth">0</b></div>
-      <div class="chip rain" id="rain-chip"></div>
-      <div class="hud-actions">
-        <button id="map-btn" class="pbtn" title="Map (M)">Map</button>
-        <button id="sleep" class="pbtn primary" title="Sleep at home">Sleep</button>
-        <button id="skip" class="pbtn" title="Let 7 days pass, playing them for you">Skip 7 days</button>
-        <button id="sound" class="pbtn square" aria-label="Sound on" title="Sound (N)">♪</button>
-        <button id="help" class="pbtn square" aria-label="How to play">?</button>
+    <div id="hud" class="hud hidden">
+      <aside class="goal glass" id="goal" aria-live="polite">
+        <div class="goal-top">
+          <h2>Rebuild your boat</h2>
+          <div class="pips" id="pips"></div>
+        </div>
+        <div class="step" id="step"></div>
+        <div class="rival" id="rival"></div>
+      </aside>
+
+      <div class="daybar glass">
+        <div class="day"><span id="day-n">Day 1</span><span class="dim">of 10</span></div>
+        <div class="sun"><i id="sun"></i></div>
+        <div class="town" id="town-money"></div>
+        <button id="sleep" class="mini">Sleep</button>
       </div>
-    </header>
 
-    <aside class="quest panel" id="quest" aria-live="polite"></aside>
-    <ol class="news" id="news" aria-label="Town news"></ol>
-    <div id="place" class="place hidden"></div>
-    <div id="prompt" class="prompt hidden"></div>
-    <div id="banner" class="banner hidden" role="status"></div>
-    <div id="toast" class="toast hidden" role="status"></div>
+      <div class="corner">
+        <button class="mapwrap" id="map-open" aria-label="Open the island map (M)"><canvas id="mini" width="184" height="184"></canvas><span class="m-key">M</span></button>
+        <div class="corner-btns">
+          <button id="sound" class="mini" aria-label="Sound">Sound on</button>
+          <button id="help" class="mini" aria-label="How to play">Help</button>
+        </div>
+      </div>
+
+      <div id="storm-chip" class="storm-chip hidden"></div>
+      <div id="place" class="place hidden"></div>
+      <div id="banner" class="banner hidden" role="status"></div>
+      <div id="toast" class="toast hidden" role="status"></div>
+      <div id="tip" class="tip hidden"></div>
+
+      <footer class="bag" id="bag" aria-label="Your goods"></footer>
+      <div class="keys" id="keys"></div>
+    </div>
 
     <div id="fishing" class="fishing hidden">
       <p id="fish-say" class="fish-say"></p>
-      <div id="fish-gauge" class="gauge hidden"><span class="gold"></span><i id="fish-mark"></i></div>
-      <p id="fish-casts" class="dim"></p>
-      <p class="dim">Q to stop fishing</p>
+      <div id="cast-bar" class="meter hidden"><span class="zone" id="cast-zone"></span><i id="cast-mark"></i></div>
+      <div id="fight" class="fight hidden">
+        <div class="pull left" id="pull-l">A</div>
+        <div class="fight-mid">
+          <div class="line-bar"><i id="line-bar"></i></div>
+          <div class="reel-bar"><i id="reel-bar"></i></div>
+        </div>
+        <div class="pull right" id="pull-r">D</div>
+      </div>
+      <p class="fish-foot" id="fish-foot"></p>
+    </div>
+    <div id="card" class="card hidden"></div>
+
+    <div id="touch" class="touch hidden">
+      <div id="stick" class="stick"><i id="nub"></i></div>
+      <div class="pads">
+        <button id="t-use" class="pad big">Use</button>
+        <button id="t-jump" class="pad">Jump</button>
+        <button id="t-duck" class="pad hidden">Duck</button>
+      </div>
+      <div class="fish-pads hidden" id="fish-pads">
+        <button id="t-left" class="pad wide">Left</button>
+        <button id="t-hold" class="pad big">Cast</button>
+        <button id="t-right" class="pad wide">Right</button>
+      </div>
     </div>
 
-    <div id="freebar" class="freebar hidden">Free camera: WASD to fly, drag to look, scroll for height. <button id="free-exit" class="pbtn">Back (C)</button></div>
-
-    <footer class="dock">
-      <div class="hotbar" id="bag" aria-label="Your bag"></div>
-      <div class="dock-side">
-        <div class="swaps" id="swaps"></div>
-        <div class="last" id="last"></div>
-        <div class="keys"><kbd>WASD</kbd> walk <kbd>Space</kbd> jump <kbd>E</kbd> use <kbd>M</kbd> map <kbd>C</kbd> free camera <kbd>Ctrl</kbd> + scroll zoom</div>
-      </div>
-    </footer>
+    <div id="night" class="night hidden"><h2 id="night-title"></h2><p id="night-text"></p></div>
   </div>
 
-  <div id="trade" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="t-name">
-    <div class="panel trade-card">
-      <h2 id="t-name">Villager</h2>
-      <p class="t-role" id="t-role"></p>
-      <div class="t-deal">
-        <div class="t-col"><p class="t-label">You give</p><div class="t-items" id="t-give"></div></div>
-        <div class="t-arrow" aria-hidden="true">⇄</div>
-        <div class="t-col"><p class="t-label">You get</p><div class="t-items" id="t-get"></div></div>
-      </div>
-      <p class="t-note" id="t-note"></p>
-      <div class="t-actions">
-        <button id="t-swap" class="pbtn primary big">Deal</button>
-        <button class="pbtn big" data-close>Leave</button>
-      </div>
-      <p class="t-foot" id="t-foot"></p>
-    </div>
-  </div>
-
-  <div id="chest" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="chest-title">
-    <div class="panel trade-card wide">
-      <h2 id="chest-title">Your chest</h2>
-      <div class="c-head"><span>Good</span><span>Bag</span><span></span><span></span><span>Chest</span><span></span></div>
-      <div id="chest-rows"></div>
-      <p class="t-foot" id="chest-foot"></p>
-      <div class="t-actions"><button class="pbtn big" data-close>Close</button></div>
-    </div>
-  </div>
-
-  <div id="shop" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shop-title">
-    <div class="panel trade-card wide">
-      <h2 id="shop-title">Market hall</h2>
-      <p id="shop-take" class="shop-take"></p>
-      <div id="shop-items"></div>
-      <p class="t-foot">The market takes whatever the town takes most, so prices can move to another good.</p>
-      <div class="t-actions"><button class="pbtn big" data-close>Close</button></div>
+  <div id="yard" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="yard-title">
+    <div class="sheet glass">
+      <h2 id="yard-title">The shipyard</h2>
+      <p class="sheet-sub" id="yard-take"></p>
+      <div id="yard-items"></div>
+      <div class="row"><button class="btn" data-close>Leave</button></div>
     </div>
   </div>
 
   <div id="map" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="map-title">
-    <div class="panel trade-card wide">
-      <h2 id="map-title">Island map</h2>
-      <p class="t-foot">Click a place to go there.</p>
-      <div class="map-area" id="map-dots"></div>
-      <div class="t-actions"><button class="pbtn big" data-close>Close</button></div>
+    <div class="sheet glass wide">
+      <h2 id="map-title">The island</h2>
+      <div class="map-area" id="map-area"></div>
+      <p class="sheet-sub">Each village makes one good and wants another. That ring is why barter hurts, and why the island needs money.</p>
+      <div class="row"><button class="btn" data-close>Close</button></div>
     </div>
   </div>
 
-  <section id="intro" class="modal" aria-labelledby="title">
-    <div class="panel intro-card">
-      <h1 id="title" class="logo">MINTLESS</h1>
-      <p class="tagline">An island with no coins, and nobody who can print them.</p>
-      <ol class="how" id="how"></ol>
-      <div class="why">
-        <div class="dl" id="dl" aria-label="Growtopia Diamond Lock price in rupiah, 2015 to 2026"></div>
-        <p>In 2016 one Growtopia Diamond Lock cost <b>Rp100,000</b>. In 2026 it costs <b class="bad">Rp299</b>. What happens to your savings when money moves? Find out here.</p>
-      </div>
-      <div class="row">
-        <button id="play-salt" class="pbtn primary big">Play Salt Town</button>
-        <button id="play-mystery" class="pbtn big">Mystery town</button>
-        <button id="back" class="pbtn big hidden">Back to the island</button>
-      </div>
-      <p class="fine"><span id="loading">Building the island...</span> Best on a laptop. <a href="./lab.html">Lab: rules, proof and the on-chain town</a></p>
+  <section id="title" class="title" aria-labelledby="logo">
+    <h1 id="logo" class="logo">Mintless</h1>
+    <p class="tag">Shipwrecked on an island with no coins.<br>Barter, rebuild your boat, and guess what becomes money next.</p>
+    <div class="row">
+      <button id="play" class="btn primary huge">Play</button>
+      <button id="play-next" class="btn huge hidden">Mystery island</button>
     </div>
+    <p class="fine"><span id="loading">Building the island...</span> <a href="./lab.html">Rules and on-chain proof</a></p>
   </section>
 
   <section id="end" class="modal hidden" aria-labelledby="end-title">
-    <div class="panel intro-card">
-      <p class="kicker">Season over</p>
-      <h1 id="end-title" class="end-title"></h1>
+    <div class="sheet glass wide end">
+      <p class="kicker" id="end-kick"></p>
+      <h1 id="end-title"></h1>
+      <p id="end-sub" class="sheet-sub"></p>
       <div class="chart-box">
-        <svg id="end-chart" class="end-svg" viewBox="0 0 600 160" preserveAspectRatio="none" aria-label="Your savings each day, next to the Diamond Lock price"></svg>
-        <div class="legend"><span><i style="background:#00bfff"></i>your savings, day 1 to 30</span><span><i style="background:#ff6b6b"></i>Diamond Lock price, 2015 to 2026</span><span>bottom strip: the town's money each day</span></div>
+        <svg id="end-chart" viewBox="0 0 600 170" preserveAspectRatio="none" aria-label="What your goods could buy each day, next to the Diamond Lock price"></svg>
+        <div class="legend"><span><i style="background:#00bfff"></i>your wealth, day 1 to 10</span><span><i style="background:#ff6b6b"></i>Growtopia Diamond Lock price, 2015 to 2026</span></div>
       </div>
-      <p id="end-save" class="tagline"></p>
       <p id="end-story" class="story"></p>
-      <p id="end-keep" class="story"></p>
       <div class="row">
-        <button id="again" class="pbtn primary big">Next season: mystery town</button>
-        <button id="replay" class="pbtn big">Same town again</button>
+        <button id="again" class="btn primary">Next island</button>
+        <button id="replay" class="btn">Same island</button>
       </div>
-      <p class="fine"><a href="./lab.html">See the rules and proof</a></p>
     </div>
   </section>
 
