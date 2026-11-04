@@ -801,7 +801,7 @@ function render(t, dt) {
 let last = performance.now(), slow = 0, seen = 0, soundT = 0;
 function watchSpeed(ms) {
   seen++;
-  if (ms > 42) slow++;
+  if (ms > 36 && ms < 400) slow++;
   if (seen < 90) return;
   if (slow > 45) lowerQuality();
   seen = slow = 0;
@@ -814,6 +814,7 @@ function lowerQuality() {
     return;
   }
   if (WORLD.line) WORLD.line.visible = false;
+  crowd.lines(false);
 }
 
 function frame(now) {

@@ -111,6 +111,9 @@ export function makeCrowd(scene, roles, lines = true) {
   }
   groups.forEach((g) => (g.body.instanceColor.needsUpdate = true));
   return {
+    lines(on) {
+      for (const g of groups) g.line.visible = on;
+    },
     set(i, x, y, z, ry, sy, blink, scale = 1) {
       const { grp, slot } = lookup[i];
       Q.setFromAxisAngle(Y, ry);
