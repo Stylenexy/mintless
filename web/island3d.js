@@ -32,7 +32,7 @@ export const DOCKS = [
 
 // Road network, for painting and for the golden trail.
 export const NODES = {
-  camp: [CAMP.x, CAMP.z], square: [SQUARE.x, SQUARE.z], salt: [24, 84], weaver: [25, 42], forest: [60, 19],
+  camp: [CAMP.x, CAMP.z], square: [SQUARE.x, SQUARE.z + 6], salt: [24, 84], weaver: [25, 42], forest: [60, 19],
   rice: [108, 44], harbor: [106, 94], north: [BRIDGES[0].x, 46], south: [BRIDGES[1].x, 90], pier: [62, 112], steps: [DOCKS[1].x - 1, 66],
   northW: [BRIDGES[0].x - 9, 46], northE: [BRIDGES[0].x + 9, 46], southW: [BRIDGES[1].x - 9, 90], southE: [BRIDGES[1].x + 9, 90],
   wreck: [WRECK.x + 5, 105], hp: [108, 100],

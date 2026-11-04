@@ -3,7 +3,7 @@
 // tenth night. The town runs on the same engine the tests and the NEAR contract
 // check; this file is only the body around it.
 import * as THREE from "three";
-import { createTown } from "../engine/town.js";
+import { createTown, step } from "../engine/town.js";
 import { SALT_TOWN } from "../rules/town.js";
 import { mysteryRules } from "../engine/mystery.js";
 import { answer, wantsOf, offer } from "../engine/visitor.js";
@@ -22,6 +22,16 @@ const FOLK = [
   "Made", "Nyoman", "Ratna", "Surya", "Tari", "Wulan", "Yoga", "Agus",
 ];
 const ROLE = { saltmaker: "saltmaker", fisher: "fisher", farmer: "farmer", weaver: "weaver", logger: "logger" };
+const CHATTER = {
+  saltmaker: ["Salt keeps. That is the whole trick.", "Never met a salt that went bad.", "Sea goes in, money comes out. Allegedly."],
+  fisher: ["Fish don't wait for a good price.", "Sell it by noon or it sells itself.", "The big ones bite at the far pier."],
+  farmer: ["Rice takes patience. So does a fair swap.", "Everyone eats. That's my whole plan.", "My buffalo has better savings than me."],
+  weaver: ["Cloth barely ages. I wish I could say the same.", "You can't eat it. You can still trade it.", "Nice scarf. Who made that?"],
+  logger: ["Wood rots slower than promises.", "Need a plank? Need a friend? Same price.", "Every tree here has a name. Don't ask."],
+};
+const RIDING = ["Is that a duck?", "Best vehicle on the island.", "Faster than the ferry, that thing."];
+const STACKED = ["That stack is going to fall.", "Rich and wobbly.", "Careful, you'll lose the top one."];
+const SOAKED = ["Everybody stay calm and swap!", "Look at the sky. Look at my stock.", "It's soup now. It's all soup."];
 // Lowest seller price of a Growtopia Diamond Lock in rupiah, 2015 to Jun 2026 (riset-track/growtopia-angka.md).
 const DL_PRICES = [185000, 100000, 45000, 35000, 26000, 15800, 10000, 8000, 4000, 3700, 3300, 501, 299];
 
@@ -149,8 +159,10 @@ function newRun(kind, seed) {
     you: { x: CAMP.x - 1, y: 1.2, z: CAMP.z + 4, vx: 0, vz: 0, vy: 0, air: false, dir: Math.PI * 0.9, walk: 0, moveT: 0, coyote: 0, sq: 1, sqv: 0, riding: false, landed: 0, dust: 0, step: 0 },
     clock: 0, wet: 0, panel: null, near: null, night: null, ended: false, ver: 1, seenVer: 0, stepInfo: null, place: "", book: loadBook(),
     log: [], lost: 0, peakLoss: 0, banners: [], showing: false, fish: null, speak: null, tips: {}, routeT: 0, route: [], sawRain: false, parting: null, firstFish: true, dockEnd,
-    moneyBorn: 0, rivalDone: 0, won: 0, swaps: 0, idle: 0,
+    moneyBorn: 0, rivalDone: 0, won: 0, swaps: 0, idle: 0, chat: 5, bottles: {}, duskTold: false, firstChain: 0,
   };
+  S.firstChain = fishToGood(shop());
+  for (const b of bottleMeshes) b.visible = true;
   hideAllPanels();
   V.forEach((p, i) => {
     Object.assign(p, { x: p.hx, z: p.hz, tx: p.hx, tz: p.hz, wait: 1 + (i % 7) * 0.7, hop: 0, greeted: false, walk: 0 });
@@ -171,6 +183,13 @@ function newRun(kind, seed) {
 }
 
 const money = () => S.town.history[S.town.history.length - 1].money;
+// How many swaps one fish needs to reach a good: the number money shrinks.
+function fishToGood(g) {
+  const bag = S.me.bag.map(() => 0);
+  bag[1] = 1;
+  const r = routeTo(S.town, { bag }, g);
+  return r ? r.length : 0;
+}
 const shop = () => shopGood(S.town);
 const dayNum = () => Math.floor(S.town.day / TOWN_DAYS_PER_NIGHT) + 1;
 const rainEvent = () => S.rules.events[0] || null;
@@ -221,11 +240,24 @@ function moveHero(dt) {
   const k = 1 - Math.exp(-dt * (you.riding ? 5 : 11));
   you.vx += (wx * top - you.vx) * k;
   you.vz += (wz * top - you.vz) * k;
-  const nx = you.x + you.vx * dt, nz = you.z + you.vz * dt;
-  if (!blocked(nx, you.z)) you.x = nx;
-  else you.vx = 0;
-  if (!blocked(you.x, nz)) you.z = nz;
-  else you.vz = 0;
+  let nx = you.x + you.vx * dt, nz = you.z + you.vz * dt;
+  const body = you.riding ? 0.7 : 0.42;
+  for (let k = 0; k < 2; k++) {
+    const o = hitSolid(nx, nz, body);
+    if (!o) break;
+    const d = Math.hypot(nx - o.x, nz - o.z) || 0.01;
+    nx = o.x + ((nx - o.x) / d) * (o.r + body + 0.02);
+    nz = o.z + ((nz - o.z) / d) * (o.r + body + 0.02);
+  }
+  if (!blocked(nx, nz)) {
+    you.x = nx;
+    you.z = nz;
+  } else {
+    if (!blocked(nx, you.z)) you.x = nx;
+    else you.vx = 0;
+    if (!blocked(you.x, nz)) you.z = nz;
+    else you.vz = 0;
+  }
   const speed = Math.hypot(you.vx, you.vz);
   if (speed > 0.6) {
     const want = Math.atan2(you.vx, you.vz);
@@ -342,6 +374,24 @@ function updateVillagers(t, dt) {
   }
   crowd.commit();
   S.watching = nearest;
+  S.chat -= dt;
+  if (S.chat <= 0 && nearest >= 0 && !S.speak && !S.fish && !S.panel) {
+    S.chat = 7 + noise2(Math.floor(t), 3) * 5;
+    const p = V[nearest];
+    const pool = you.riding ? RIDING : raining() ? SOAKED : bagCount(S.me) >= 9 ? STACKED : CHATTER[S.town.agents[nearest].role];
+    say(nearest, pool[Math.floor(t) % pool.length], 2800);
+    p.hop = Math.max(p.hop, 0.5);
+  }
+}
+
+function honk() {
+  const you = S.you;
+  if (!you.riding || !canWalk()) return;
+  sfx("quack");
+  you.sqv = 4;
+  V.forEach((p) => {
+    if (Math.hypot(p.x - you.x, p.z - you.z) < 10) p.hop = 1;
+  });
 }
 
 function say(i, text, ms = 3200) {
@@ -642,6 +692,10 @@ function update(dt, now) {
   const paused = !$("title").classList.contains("hidden") || S.panel || S.ended;
   if (!paused && !S.night && !S.parting) {
     S.clock += dt / dayLength();
+    if (S.clock > 0.8 && !S.duskTold) {
+      S.duskTold = true;
+      toast("The sun is going down.");
+    }
     if (S.clock >= 1) beginNight();
   }
   moveHero(dt);
@@ -718,6 +772,10 @@ function render(t, dt) {
   stack.sway += stack.swayV * dt;
   stack.group.rotation.x = stack.sway;
 
+  bottleMeshes.forEach((m, i) => {
+    m.position.y = 0.05 + Math.sin(t * 1.8 + i) * 0.12;
+    m.rotation.x = Math.sin(t * 1.1 + i) * 0.2;
+  });
   pillar.rotation.y = t * 0.8;
   pillar.position.y = heightAt(SQUARE.x, SQUARE.z) + 5.3 + Math.sin(t * 1.6) * 0.18;
 
@@ -798,6 +856,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
   } else if (k === "e" || k === "Enter") use();
   else if (k === "r") toggleDuck();
+  else if (k === "q") honk();
   else if (k === "c") toggleFree();
   else if (k === "m") openPanel("map");
   else if (k === "n") toggleSound();
@@ -923,6 +982,7 @@ function findNear() {
     });
     for (const o of WORLD.objects) {
       const d = Math.hypot(o.x - you.x, o.z - you.z);
+      if (o.kind === "bottle" && S.bottles[o.i]) continue;
       if (d < bd + 0.6) {
         bd = d;
         best = { kind: o.kind, o };
@@ -944,6 +1004,29 @@ function use() {
   else if (n.kind === "yard") openPanel("yard");
   else if (n.kind === "bed") beginNight();
   else if (n.kind === "dock") startFishing(n.o);
+  else if (n.kind === "bottle") readBottle(n.o);
+  else if (n.kind === "mira") toast(`Mira: ${["Don't look at me, my boat is sand too.", "Hull's done. Yours?", "Mast is up. Tick tock.", "One more part. Enjoy the island.", "Bye!"][S.rival.parts]}`);
+}
+
+// A note in a bottle tells you where the town is heading, if you bother to swim for it.
+function nextMoney() {
+  const t = structuredClone(S.town);
+  const now = money();
+  while (t.day < 30) {
+    step(t);
+    const m = t.history[t.history.length - 1].money;
+    if (m >= 0 && m !== now) return m;
+  }
+  return -1;
+}
+function readBottle(o) {
+  S.bottles[o.i] = true;
+  bottleMeshes[o.i].visible = false;
+  sfx("buy");
+  burst(o.x, 0.6, o.z, 18, [1, 1, 1], 4, 0.6, 0.5);
+  const g = nextMoney();
+  const text = g < 0 ? "Nothing changes. Enjoy the quiet." : money() < 0 ? `Soon everyone here will take ${GOODS[g]}. Trust me.` : `When this money dies, they will all want ${GOODS[g]}. Trust me.`;
+  banner("A note in a bottle", `"${text}"`);
 }
 
 // ------------------------------------------------------------ objective, trail
@@ -1176,7 +1259,7 @@ function renderBubbles() {
 
 // ------------------------------------------------------------ panels
 function hideAllPanels() {
-  for (const id of ["yard", "map", "end"]) $(id).classList.add("hidden");
+  for (const id of ["yard", "map", "end", "helpbox"]) $(id).classList.add("hidden");
   $("night").classList.add("hidden");
   $("fishing").classList.add("hidden");
   $("card").classList.add("hidden");
@@ -1309,6 +1392,13 @@ function drawMini(t) {
   }
   g.drawImage(miniBase, 0, 0);
   const k = s / SIZE;
+  g.fillStyle = "#fff";
+  for (const o of WORLD.objects) {
+    if (o.kind !== "bottle" || S.bottles[o.i]) continue;
+    g.beginPath();
+    g.arc(o.x * k, o.z * k, 3, 0, 7);
+    g.fill();
+  }
   const hotAt = WORLD.objects.find((o) => o.kind === "dock" && o.i === hotDock());
   if (hotAt) {
     g.fillStyle = "#ff5d73";
@@ -1355,6 +1445,7 @@ const FISH = [
   { name: "Tide King", a: "#1f8fd6", b: "#d9f4ff", f: "#ffd166", rank: 3, cm: [70, 110], line: "Wears the current like a cape." },
   { name: "Storm Marlin", a: "#47507a", b: "#c9d4ee", f: "#ff5d73", rank: 4, cm: [120, 190], rain: true, line: "Only comes up when the sky breaks." },
 ];
+const bottleMeshes = [];
 let fishMesh = null, rod = null, rodMid = null, rodEnd = null, bobber = null, fishLine = null, ring = null, shadow = null;
 
 function initFishing() {
@@ -1564,7 +1655,8 @@ function endFight(won) {
   saveBook();
   const stars = "★".repeat(k.rank + 1) + '<span style="opacity:.25">' + "★".repeat(4 - k.rank) + "</span>";
   const card = $("card");
-  card.innerHTML = `${isNew ? '<span class="new">NEW</span>' : ""}<h3>${k.name}</h3><div class="stars">${stars}</div><p>${cm} cm. ${k.line}</p><p class="plus">+${got} ${pic(1)} ${score >= 70 ? "Clean catch!" : ""}</p><p style="font-size:14px;color:#46507a">${Object.keys(S.book).length} of ${FISH.length} in your fish book</p>`;
+  const next = S.firstFish ? `<p style="font-weight:800;color:#0a7fb8">${touchDevice ? "Tap Stop fishing" : "Press Q"}, then follow the gold trail to swap it.</p>` : `<p style="font-size:14px;color:#46507a">${Object.keys(S.book).length} of ${FISH.length} in your fish book</p>`;
+  card.innerHTML = `${isNew ? '<span class="new">NEW</span>' : ""}<h3>${k.name}</h3><div class="stars">${stars}</div><p>${cm} cm. ${k.line}</p><p class="plus">+${got} ${pic(1)} ${score >= 70 ? "Clean catch!" : ""}</p>${next}`;
   card.classList.remove("hidden");
   renderBag();
   bump(1);
@@ -1733,7 +1825,10 @@ function updateFishing(dt) {
       fishMesh.rotation.y += dt * 2.6;
       fishMesh.rotation.z = Math.sin(t * 8) * 0.14;
     }
-    if (f.t > 3.2) nextCast();
+    if (f.t > (S.firstFish === false && !S.saidFirst ? 6 : 3.2)) {
+      S.saidFirst = true;
+      nextCast();
+    }
   } else if (f.stage === "rest") {
     if (f.t > f.wait) nextCast();
   }
@@ -1818,6 +1913,7 @@ function updateNight(dt) {
   if (k >= 1) {
     S.night = null;
     S.clock = 0;
+    S.duskTold = false;
     sfx("dawn");
     if (S.town.day >= DAYS * TOWN_DAYS_PER_NIGHT) return finish(false);
     if (S.banners.length) showBanners();
@@ -1848,7 +1944,8 @@ function applyNight() {
     S.moneyBorn++;
     V.forEach((p) => (p.hop = 1));
     burst(SQUARE.x, 7, SQUARE.z, 50, [1, 0.85, 0.35], 8, 1.2, 0.5);
-    S.banners.push({ title: `${pic(m)} ${cap(GOODS[m])} is money now`, text: before >= 0 ? `It replaced ${GOODS[before]}. Nobody decided it.` : "Nobody decided it. People just started taking it.", cls: "gold", sound: "money" });
+    const steps = fishToGood(m);
+    S.banners.push({ title: `${pic(m)} ${cap(GOODS[m])} is money now`, text: before >= 0 ? `It replaced ${GOODS[before]}. Nobody decided it.` : `Nobody decided it. On day 1 a fish took ${S.firstChain} swaps to become ${GOODS[m]}. Now it takes ${Math.max(1, steps)}.`, cls: "gold", sound: "money" });
   } else if (m < 0 && before >= 0) S.banners.push({ title: `${cap(GOODS[before])} stopped being money`, text: "The town is bartering again. What will it trust next?", cls: "bad" });
   if (g !== shopWas) S.banners.push({ title: `The shipwright now takes ${pic(g)} ${GOODS[g]}`, text: `Your ${GOODS[shopWas]} no longer buys boat parts.`, cls: "bad", sound: "deny" });
   const ev = rainEvent();
@@ -2007,7 +2104,17 @@ function toggleSound() {
 $("sound").addEventListener("click", toggleSound);
 $("sleep").addEventListener("click", () => S && canWalk() && beginNight());
 $("help").addEventListener("click", () => {
-  toast(touchDevice ? "Goal: fix four boat parts. Follow the gold trail. Green bubbles can swap with you." : "Goal: fix four boat parts. Follow the gold trail. Green bubbles can swap with you. E use, R duck, M map.");
+  if (!S || S.fish || S.night) return;
+  const key = (d, t) => (touchDevice ? t : d);
+  $("how").innerHTML = [
+    "<b>Goal:</b> fix four boat parts before the tenth night.",
+    "<b>Gold trail:</b> always leads to your next step.",
+    `<b>Fish:</b> at a pier, ${key("hold Space", "hold the button")} and let go in the gold. When the fish pulls, press the other way.`,
+    `<b>Swap:</b> a green bubble means that villager can swap with you. ${key("Press E", "Tap Swap")}.`,
+    "<b>Pay:</b> the shipyard only takes what the whole town takes. It is marked on your bag. That can change.",
+    `<b>Storm:</b> after day 6 it soaks what people hoard. Spend or swap it first. ${key("R rides your duck, Q honks.", "The Duck button rides your duck.")}`,
+  ].map((l) => `<li>${l}</li>`).join("");
+  openPanel("helpbox");
 });
 
 // ------------------------------------------------------------ HUD
@@ -2028,14 +2135,14 @@ function drawKeys() {
   const you = S.you;
   const near = S.near;
   $("t-duck").classList.toggle("hidden", !S.me.gear.duck);
-  $("t-use").textContent = near?.kind === "dock" ? "Fish" : near?.kind === "yard" ? "Open" : near?.kind === "bed" ? "Sleep" : near?.kind === "trader" ? "Swap" : "Use";
+  $("t-use").textContent = near?.kind === "dock" ? "Fish" : near?.kind === "yard" ? "Open" : near?.kind === "bed" ? "Sleep" : near?.kind === "trader" ? "Swap" : near?.kind === "bottle" ? "Read" : "Use";
   $("t-use").style.opacity = near ? 1 : 0.5;
   if (touchDevice) return;
-  const verb = near ? { dock: "fish here", yard: "open the shipyard", bed: "sleep", trader: "swap" }[near.kind] : null;
+  const verb = near ? { dock: "fish here", yard: "open the shipyard", bed: "sleep", trader: "swap", bottle: "read the note", mira: "talk to Mira" }[near.kind] : null;
   $("keys").innerHTML = [
     verb ? `<kbd>E</kbd> ${verb}` : "",
     "<kbd>WASD</kbd> move <kbd>Shift</kbd> sprint <kbd>Space</kbd> jump",
-    `${S.me.gear.duck ? `<kbd>R</kbd> ${you.riding ? "get off" : "ride duck"} ` : ""}<kbd>M</kbd> map <kbd>Ctrl</kbd> + scroll zoom`,
+    `${S.me.gear.duck ? `<kbd>R</kbd> ${you.riding ? "get off <kbd>Q</kbd> honk" : "ride duck"} ` : ""}<kbd>M</kbd> map <kbd>Ctrl</kbd> + scroll zoom`,
   ].filter(Boolean).join("<br>");
 }
 function renderHud() {
@@ -2170,6 +2277,22 @@ function boot() {
   mira.scale.setScalar(1.08);
   scene.add(mira);
 
+  // notes in bottles, out where only the duck can reach
+  const bg = brush();
+  bg.loft([{ y: 0, x: 0.2 }, { y: 0.5, x: 0.22 }, { y: 0.72, x: 0.09 }, { y: 0.95, x: 0.08 }], hex("#7fe0c8"), { seg: 8, shade: 0.2 });
+  bg.ball(0, 1, 0, 0.1, 0.09, 0.1, hex("#c98a56"), { seg: 6, rows: 3 });
+  const bottleGeo = bg.build();
+  [[0.55, 66], [2.45, 68], [4.5, 67]].forEach(([a, r], i) => {
+    const x = 64 + Math.cos(a) * r, z = 64 + Math.sin(a) * r;
+    const m = inked(bottleGeo, scene);
+    m.position.set(x, 0.1, z);
+    m.scale.setScalar(1.8);
+    m.rotation.z = 0.5;
+    bottleMeshes.push(m);
+    WORLD.objects.push({ kind: "bottle", x, z, i });
+  });
+  WORLD.objects.push({ kind: "mira", x: MIRA.x - 5, z: MIRA.z + 1.6 });
+
   pillar = new THREE.Group();
   pillar.position.set(SQUARE.x, 6, SQUARE.z);
   const statue = GOOD_GEO.map((g) => {
@@ -2253,6 +2376,9 @@ if (qs.has("debug")) {
     held,
     toggleDuck,
     openPanel,
+    routeOf,
+    hitSolid,
+    groundAt,
     closePanel,
     run(ms) {
       let now = performance.now();

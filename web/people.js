@@ -3,7 +3,7 @@
 // shapes, lofted in kit.js. Villagers share instanced meshes, so forty of them
 // cost about the same as one.
 import * as THREE from "three";
-import { toon, ink, inked, hex, brush, noise2 } from "./kit.js";
+import { toon, ink, inked, hex, brush, noise2, mixc } from "./kit.js";
 
 const SKIN = [hex("#f2c49b"), hex("#d99f73"), hex("#b97e57"), hex("#ffd9b5")];
 const NAVY = hex("#2a3560"), WHITE = hex("#ffffff"), DARK = hex("#1c2340"), BLUSH = hex("#ff9b8a");
@@ -298,14 +298,13 @@ export function fishGeo(a, c, fin) {
   const rings = [];
   for (let i = 0; i <= 8; i++) {
     const t = i / 8, r = Math.sin(t * Math.PI) ** 0.7 * 0.28 + 0.012;
-    rings.push({ y: -0.6 + t * 1.2, x: r * 0.62, z: r, c: i < 4 ? mix3(a, c, 0.15) : a });
+    rings.push({ y: -0.6 + t * 1.2, x: r * 0.62, z: r, c: i < 4 ? mixc(a, c, 0.15) : a });
   }
   b.at(0, 0, 0, 0, 1, 0, -1.57).loft(rings, a, { seg: 9, bottom: true, shade: 0 });
   b.at().ball(0.72, 0, 0, 0.3, 0.05, 0.27, fin, { seg: 6, rows: 3 }).ball(0.1, 0, 0.27, 0.2, 0.04, 0.2, fin, { seg: 6, rows: 2 }).ball(0.1, 0, -0.27, 0.2, 0.04, 0.2, fin, { seg: 6, rows: 2 });
   b.ball(-0.36, 0.06, 0.16, 0.05, 0.05, 0.03, DARK, { seg: 5, rows: 2, shade: 0 }).ball(-0.36, 0.06, -0.16, 0.05, 0.05, 0.03, DARK, { seg: 5, rows: 2, shade: 0 });
   return b.build();
 }
-const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
 // The boat, with the parts shown one by one as you pay for them.
 export function makeBoat() {

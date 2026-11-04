@@ -2,14 +2,14 @@
 
 A tiny market town on NEAR with no currency and no printer. 40 traders barter salt, fish, rice, cloth and wood. Nobody tells them what money is. Within a few days one good becomes the money on its own. Change one public rule, and the town switches to a different money. Nobody, including the developer, can create a single extra unit of anything.
 
-You live on a block island with no coins. Catch fish in first person, carry them to the five villages and swap goods with bot villagers. Save what the town takes most and spend it at the market. When the rains come the town's money can move to another good, and whatever you saved in the old one melts. You feel what a Growtopia Diamond Lock holder felt, except here nobody printed anything: the town did it, and reading the town could have saved you.
+You wash up on an island with no coins and a broken boat. Fish, swap goods with forty villagers, and pay the shipwright in whatever the town takes most, before the tenth night. A storm is coming, and the money can change under your feet. You feel what a Growtopia Diamond Lock holder felt, except here nobody printed anything: the town did it, and reading the town could have saved you.
 
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
 Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a separate project.
 
-![The harbor on day 8: block houses, a long pier, boats and the 3/4 island view](docs/screenshot.jpg)
+![Rice Fields seen from behind the player: straw huts, villagers with swap bubbles, the sea behind](docs/screenshot.jpg)
 
-*The harbor seen in the free-roaming 3/4 view. The camera drops into third person in villages and first person when you fish.*
+*A village in third person. Green bubbles show who can swap with you right now. The camera glides out to a 3/4 view on the road and down to first person when you fish.*
 
 ## Judges: one command
 
@@ -21,7 +21,7 @@ npm run judge
 
 It runs, in about 15 seconds:
 
-1. `npm test`: 33 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player-as-trader rules: swaps never create goods, day 1 needs four swaps, money cuts it to one).
+1. `npm test`: 41 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player rules: swaps never create goods, day 1 needs a barter chain, a steady player finishes the boat after the storm, a sloppy one stays stranded).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
 3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
@@ -41,7 +41,7 @@ PASS | rules hash on chain = sha256(rules/town.js)
 PASS | day 30: chain fingerprint 172d8ea0 = local engine replay; money = cloth
 ```
 
-To play: `npm start`, then open http://localhost:5173 (a season of 30 days takes 20 to 30 minutes, or press *Skip 7 days*). No Node? `npm run bundle` writes `dist/mintless.html`, one file that opens in any browser. The old dashboard with the rules, the what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
+To play: `npm start`, then open http://localhost:5173 (a season of 10 days takes about 15 minutes, on a laptop or a phone). No Node? `npm run bundle` writes `dist/mintless.html`, one file that opens in any browser. The dashboard with the rules, the what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
 
 ## Why this exists
 
@@ -84,17 +84,21 @@ Salt Town is the tutorial and the proof: its rules are fixed, so the claims abov
 
 ## The game loop
 
-Our first playtester could not understand a market dashboard, then found a 2D version too crowded, then finished a clearer one and said it had nothing special: nothing could be lost. So the game became an island where your savings are at stake. The dashboard lives on as the lab page, the 2D version at `web/2d/`.
+Five rounds of playtesting shaped this. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
 
-- **Work:** press E at a dock and the camera drops into first person. Cast, wait for the bite, stop the marker in the gold zone. Timing alone decides the catch; there are no dice.
-- **Trade:** walk the island in a 3/4 view locked to your character (Ctrl + scroll or pinch to zoom, within limits). Entering a village or a dock area switches to third person. Near a villager a mark shows what they take and give; press E and deal. There are no coins and no chat: goods for goods, judged by the same `willTake` rule the villagers use with each other.
-- **Save and spend:** store goods in your chest at home. The market hall takes only what the town accepts most on that day, so "town money" is simply a good, never a coin. Fast boots, a bigger boat, an ice box and skins are worth saving for. Spending burns the units.
-- **Crash:** when the rainy season soaks salt, it rots at 12% a night and the market moves to cloth. Over 50 towns, 16 salt left in the chest lost at least half its value, and moving it before the rain kept more than three times as much.
-- **Season end:** your savings are drawn next to the Diamond Lock price. Skins stay for the next season, which is a mystery town with different spoil rates.
+**Goal: fix four boat parts before the tenth night.** Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
 
-C frees the camera. M opens the island map for fast travel. Five gold shells sit on top of parkour towers.
+- **Fish.** Walk to a pier and the camera glides into first person. Cast at the ripples, watch the float, strike when it plunges, then pull against the fish with A and D. Skill alone decides the catch; there are no dice. Nine species, one of which only bites in the storm.
+- **Swap.** Villagers show what they want and what they give. A green bubble means they can swap with you; press E and the goods fly across. There are no coins and no menus: goods for goods, judged by the same `willTake` rule the villagers use with each other. On day 1 a fish takes four swaps across the island to become salt. By day 3 it takes one. That is what money does.
+- **Pay.** The shipwright takes only what the town takes most. Paying burns the units.
+- **Survive the money moving.** After day 6 the storm soaks the good people hoard. It rots at 12% a town day, the shipwright stops taking it, and your stack stops buying anything. Spend it or swap it first.
+- **Race.** Mira is rebuilding her boat on the far beach with the same rules and the same villagers.
 
-There is no stake, no pool and no real money. Your score depends only on public rules, your timing and your trades.
+The whole run is about 15 minutes. Your wealth is then drawn next to the Diamond Lock price, and the next island is a mystery: different goods last, so nobody knows what becomes money there.
+
+R rides your duck, on land and across water. M opens the map. C frees the camera. Ctrl + scroll zooms. On a phone: a stick and buttons.
+
+There is no stake, no pool and no real money. Your result depends only on public rules, your skill and your trades.
 
 ## On chain (NEAR testnet)
 
@@ -118,19 +122,19 @@ Not implemented on purpose: NEP-245 approvals and `*_transfer_call`. Transfers g
 |---|---|
 | Economy is the gameplay, evolves without a dev patch | the money is chosen by the traders and changes when a public rule changes; no admin key exists to patch it |
 | Items as NEP-245 multi tokens in one contract | yes, five goods in `mintless-mvznw81o.testnet` |
-| Merchant rules in one readable file, with reasoning | `rules/town.js`; hover any trader in the game to see why it would or would not take each good |
-| Fast-forward mode | `⏩ 7 days` in the game; `tick(days)` on chain (10 days per call) |
+| Merchant rules in one readable file, with reasoning | `rules/town.js`; villagers say why they refuse, from the same rule |
+| Fast-forward mode | every night the town runs three days; `tick(days)` on chain (10 days per call) |
 | Loop designed on paper first | see "The game loop" above |
 | Social login, no wallet popups | not built: the browser game needs no wallet at all because it plays locally; the on-chain town is played by `tools/chain.mjs` with throwaway testnet accounts |
 | Judged on the loop, not the token | there is no token to buy; goods only exist inside the town |
 
 ## Built during the hackathon
 
-All code in this repository was written on 3 November 2026, during the event (1–14 Nov). The git history shows the order: engine and tests first, then the browser game, then the contract and the testnet run.
+All code in this repository was written from 3 November 2026 on, during the event (1–14 Nov). The git history shows the order: engine and tests first, then the browser game, then the contract and the testnet run.
 
 ## Honest limits
 
-- The browser game runs the same engine locally; the testnet town is the verifiable copy. Playing the browser game does not sign transactions yet, so there is no wallet popup but also no on-chain bag. The household loop (catch, chest, market) is not in the contract yet. Social login is not built.
+- The browser game runs the same engine locally; the testnet town is the verifiable copy. Playing the browser game does not sign transactions yet, so there is no wallet popup but also no on-chain bag. The player loop (catch, boat, shipyard) is not in the contract yet. Social login is not built.
 - The town does not react to the player: you are a price taker at the town stall. The stall's own stock does not spoil.
 - Prices are the traders' average notebook values (1 to 100), a measure of tradeability, not a market-clearing price.
 - Testnet only, not audited, one town with five goods by design.
@@ -142,7 +146,7 @@ All code in this repository was written on 3 November 2026, during the event (1�
 rules/town.js        the only file that sets the economy (goods, roles, trader rule, calendar, mystery table)
 engine/town.js       the town (pure, integer-only, deterministic)
 engine/visitor.js    the player as trader 41: offers judged by the traders' own rule, shortest swap chain
-engine/homestead.js  the household: catch, chest, market, hearts, savings, nights
+engine/island.js     one run: the boat, the shipyard, the catch, nights (engine/homestead.js only serves the v4 archive)
 engine/player.js     bag spoilage and prices (used by the visitor and the lab page)
 engine/mystery.js    builds a mystery town's rules from its seed
 test/                node:test checks over 500 Salt Towns and 760 mystery towns
@@ -150,7 +154,7 @@ scripts/proof.js     prints the evidence tables
 scripts/mystery-table.js   finds the playable rows of the mystery table
 scripts/bundle.js    builds dist/mintless.html (the game) and dist/mintless-lab.html, one file each
 scripts/verify-chain.js   read-only check of the testnet town
-web/                 the 3D game (game.js, world3d.js: every block and person built in code), the lab page (lab.html), the old 2D game (2d/), Three.js (vendor/)
+web/                 the game (game.js; kit.js = toon look, island3d.js = the island, people.js = everyone in it, audio.js = synthesized sound), the lab page (lab.html), earlier versions (2d/, v4/), Three.js (vendor/)
 contract/            NEAR contract (Rust) + parity fixtures
 tools/chain.mjs      deploy to testnet with throwaway accounts, play, delete the last key
 ```
@@ -167,7 +171,7 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 
 - Engine, tests and scripts: plain JavaScript on Node.js built-ins, no npm dependencies. 3D rendering: Three.js r160, vendored in `web/vendor/`.
 - Contract: Rust with `near-sdk` 5.30.0. Deploy tool only: `near-api-js` 7.4.0.
-- Fonts: Pixelify Sans and Press Start 2P for digits (game); Fraunces, Nunito, JetBrains Mono (lab page), all from Google Fonts. All blocks, characters and icons are drawn in code; no image or model assets.
+- Fonts: Lilita One and Baloo 2 (game); Fraunces, Nunito, JetBrains Mono (lab page), all from Google Fonts. All terrain, characters, goods, music and sound are made in code; there are no image, model or audio files.
 - AI: code and documentation were written with an AI coding assistant (Claude Code), listed here as the hackathon rules ask. Every claim in this README is checked by the commands above.
 
 ## Team

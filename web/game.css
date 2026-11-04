@@ -159,6 +159,9 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 7p
 .btn.huge { font-size: 26px; padding: 8px 46px; font-family: var(--display); font-weight: 400; }
 .btn[aria-disabled="true"] { opacity: 0.48; cursor: default; }
 
+.how { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 17px; font-weight: 500; }
+.how li { padding: 7px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.08); }
+.how b { color: var(--gold); }
 .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.08); margin-bottom: 7px; }
 .item.next { background: rgba(0, 191, 255, 0.2); border: 1px solid rgba(0, 191, 255, 0.6); }
 .item b { display: block; font-size: 19px; }
