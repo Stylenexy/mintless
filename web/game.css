@@ -192,6 +192,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 7p
 .pad.big { width: 98px; height: 98px; background: rgba(0, 191, 255, 0.72); font-size: 21px; }
 .pad.wide { width: 94px; height: 74px; border-radius: 22px; }
 .fish-pads { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 12px; }
+#t-hold { margin: 0 auto; }
 
 @media (max-width: 760px), (max-height: 520px) {
   .keys { display: none; }
@@ -201,9 +202,11 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 7p
   .goal h2 { font-size: 16px; }
   .step { font-size: 15px; }
   .rival { display: none; }
-  .daybar { top: auto; bottom: 170px; left: 14px; transform: none; padding: 3px 10px; font-size: 14px; gap: 7px; }
-  .sun { width: 46px; }
-  .bag { bottom: auto; top: 120px; left: 14px; transform: none; flex-direction: column; gap: 4px; }
+  .daybar { top: 88px; left: 14px; transform: none; padding: 2px 8px; font-size: 13px; gap: 6px; max-width: calc(100vw - 132px); }
+  .daybar .town { display: none; }
+  .sun { width: 40px; }
+  .storm-chip { top: 122px; left: 80px; transform: none; font-size: 13px; white-space: normal; }
+  .bag { bottom: auto; top: 126px; left: 14px; transform: none; flex-direction: column; gap: 4px; }
   .slot { width: 56px; height: 54px; }
   .slot img { width: 34px; height: 34px; margin-top: -9px; }
   .slot .count { font-size: 16px; }

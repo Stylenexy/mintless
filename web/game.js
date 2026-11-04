@@ -66,9 +66,9 @@ let V = [];
 
 const cam = {
   focus: new THREE.Vector3(64, 2, 64), fv: new THREE.Vector3(),
-  dist: 104, dv: 0, pitch: 0.62, pv: 0, yaw: 0.5, yv: 0, fov: 38, fovv: 0, shake: 0,
+  dist: 104, dv: 0, pitch: 0.62, pv: 0, yaw: 0.5, yv: 0, fov: 38, fovv: 0, shake: 0, slow: 0,
 };
-const view = { mode: "orbit", zoom: 23, yaw: 0, drag: null, freeMix: 0, freeMixV: 0, free: { pos: new THREE.Vector3(), yaw: 0, pitch: -0.6 } };
+const view = { mode: "orbit", zoom: 26, yaw: 0, drag: null, freeMix: 0, freeMixV: 0, free: { pos: new THREE.Vector3(), yaw: 0, pitch: -0.6 } };
 
 function resize() {
   const r = $("stage").getBoundingClientRect();
@@ -146,7 +146,7 @@ function newRun(kind, seed) {
   const dockEnd = WORLD.objects.find((o) => o.kind === "dock");
   S = {
     kind, seed, rules, town, me, rival,
-    you: { x: CAMP.x - 7, y: 1.2, z: CAMP.z + 7, vx: 0, vz: 0, vy: 0, air: false, dir: Math.PI * 0.9, walk: 0, moveT: 0, coyote: 0, sq: 1, sqv: 0, riding: false, landed: 0, dust: 0, step: 0 },
+    you: { x: CAMP.x - 1, y: 1.2, z: CAMP.z + 4, vx: 0, vz: 0, vy: 0, air: false, dir: Math.PI * 0.9, walk: 0, moveT: 0, coyote: 0, sq: 1, sqv: 0, riding: false, landed: 0, dust: 0, step: 0 },
     clock: 0, wet: 0, panel: null, near: null, night: null, ended: false, ver: 1, seenVer: 0, stepInfo: null, place: "", book: loadBook(),
     log: [], lost: 0, peakLoss: 0, banners: [], showing: false, fish: null, speak: null, tips: {}, routeT: 0, route: [], sawRain: false, parting: null, firstFish: true, dockEnd,
     moneyBorn: 0, rivalDone: 0, won: 0, swaps: 0, idle: 0,
@@ -571,7 +571,9 @@ function placeCamera(dt) {
   // while the player runs, look a little ahead
   const lead = view.mode === "roam" ? 0.28 : 0;
   const ax = goal.fx + you.vx * lead, az = goal.fz + you.vz * lead;
-  const fast = view.mode === "first" || view.mode === "orbit" || view.mode === "cine" ? goal.smooth : 0.16;
+  cam.slow = Math.max(0, cam.slow - dt);
+  if (cam.slow > 0) goal.smooth = 0.95;
+  const fast = view.mode === "first" || view.mode === "orbit" || view.mode === "cine" || cam.slow > 0 ? goal.smooth : 0.16;
   [cam.focus.x, cam.fv.x] = damp(cam.focus.x, ax, cam.fv.x, fast, dt);
   [cam.focus.y, cam.fv.y] = damp(cam.focus.y, goal.fy, cam.fv.y, Math.max(fast, 0.2), dt);
   [cam.focus.z, cam.fv.z] = damp(cam.focus.z, az, cam.fv.z, fast, dt);
@@ -617,7 +619,7 @@ const touchPortrait = () => innerHeight > innerWidth;
 function chooseMode() {
   if (view.mode === "free" || view.mode === "first" || view.mode === "orbit" || view.mode === "cine") return;
   const you = S.you;
-  const zones = [...VILLAGES.map((v) => [v.x, v.z, 13]), [SQUARE.x, SQUARE.z, 12], [YARD.x, YARD.z, 7]];
+  const zones = [...VILLAGES.map((v) => [v.x, v.z, 13]), [SQUARE.x, SQUARE.z, 12], [YARD.x, YARD.z, 4.5]];
   const margin = view.mode === "third" ? 3.5 : 0;
   const inside = !you.riding && zones.some(([x, z, r]) => Math.hypot(you.x - x, you.z - z) < r + margin);
   const onPier = WORLD.objects.some((o) => o.kind === "dock" && Math.hypot(you.x - o.x, you.z - o.z) < 8 + margin);
@@ -721,8 +723,11 @@ function render(t, dt) {
 
   const p = S.night ? S.night.sky : S.clock * 0.9;
   const dark = applySky(Math.min(1, p), S.wet);
-  ambience({ sea: 0.5, wind: 0.08 + S.wet * 0.5, rain: S.wet > 0.5 ? S.wet : 0 });
-  musicMood(S.wet > 0.6 ? "storm" : S.clock > 0.72 ? "dusk" : "day");
+  if (t - soundT > 1) {
+    soundT = t;
+    ambience({ sea: 0.5, wind: 0.08 + S.wet * 0.5, rain: S.wet > 0.5 ? S.wet : 0 });
+    musicMood(S.wet > 0.6 ? "storm" : S.clock > 0.72 ? "dusk" : "day");
+  }
 
   renderTrail(t);
   renderBubbles();
@@ -733,7 +738,7 @@ function render(t, dt) {
   return dark;
 }
 
-let last = performance.now(), slow = 0, seen = 0;
+let last = performance.now(), slow = 0, seen = 0, soundT = 0;
 function watchSpeed(ms) {
   seen++;
   if (ms > 42) slow++;
@@ -774,7 +779,7 @@ document.addEventListener("keydown", (e) => {
   if (S.panel) {
     if (k === "Escape") closePanel();
     if (S.panel === "map" && k === "m") closePanel();
-    if (S.panel === "yard" && (k === "e" || k === "Enter")) payNext();
+    if (S.panel === "yard" && (k === "e" || k === "Enter") && !e.repeat) payNext();
     if (S.panel === "yard" && /^[1-3]$/.test(k)) document.querySelectorAll("#yard-items button")[Number(k) - 1]?.click();
     return;
   }
@@ -927,7 +932,7 @@ function findNear() {
   if ((best?.i ?? best?.o) !== (S.near?.i ?? S.near?.o)) {
     S.near = best;
     drawKeys();
-    if (best && best.kind === "trader") say(best.i, lineFor(best.i), 2600);
+    if (best && best.kind === "trader" && bestGive(S.town, S.me, best.i) < 0) say(best.i, lineFor(best.i), 2600);
   } else S.near = best;
 }
 
@@ -1304,6 +1309,13 @@ function drawMini(t) {
   }
   g.drawImage(miniBase, 0, 0);
   const k = s / SIZE;
+  const hotAt = WORLD.objects.find((o) => o.kind === "dock" && o.i === hotDock());
+  if (hotAt) {
+    g.fillStyle = "#ff5d73";
+    g.beginPath();
+    g.arc(hotAt.x * k, hotAt.z * k, 4 + Math.sin(t * 7), 0, 7);
+    g.fill();
+  }
   const info = S.stepInfo;
   if (info) {
     g.fillStyle = "#ffd166";
@@ -1534,7 +1546,8 @@ function endFight(won) {
     return nextCast(1.1);
   }
   const score = Math.round(f.castQ * 30 + f.strikeQ * 30 + (1 - f.peak) * 40);
-  const got = catchFish(me, score + 15);
+  const hot = f.o.i === hotDock();
+  const got = catchFish(me, score + 15 + (hot ? 25 : 0));
   S.ver++;
   f.stage = "card";
   f.t = 0;
@@ -1559,6 +1572,8 @@ function endFight(won) {
   renderFish();
   if (S.firstFish) S.firstFish = false;
 }
+
+const hotDock = () => (S.seed + dayNum() * 2) % DOCKS.length;
 
 function nextCast(delay = 0) {
   const f = S.fish;
@@ -1726,6 +1741,7 @@ function updateFishing(dt) {
   rod.rotation.x = lerp(rod.rotation.x, tilt - 0.5, 1 - Math.exp(-dt * 12));
   rod.rotation.z = lerp(rod.rotation.z, lean - 0.15, 1 - Math.exp(-dt * 10));
   rod.position.z = -1 + push;
+  rod.position.x = Math.min(0.46, camera.aspect * 0.33);
   const bend = f.stage === "fight" ? 0.22 + f.tension * 0.5 : f.stage === "bite" ? 0.3 : 0.04;
   f.bend = lerp(f.bend ?? 0, bend, 1 - Math.exp(-dt * 14));
   rodMid.rotation.x = -f.bend * 0.8;
@@ -1804,7 +1820,8 @@ function updateNight(dt) {
     S.clock = 0;
     sfx("dawn");
     if (S.town.day >= DAYS * TOWN_DAYS_PER_NIGHT) return finish(false);
-    showBanners();
+    if (S.banners.length) showBanners();
+    else toast(`Fish are running at the ${DOCKS[hotDock()].name.toLowerCase()} today.`);
     renderHud();
   }
 }
@@ -1829,6 +1846,8 @@ function applyNight() {
   if (lost) S.banners.push({ title: `${r.lost.map((u, k) => (u ? `-${u} ${pic(k)}` : "")).join(" ")} rotted overnight`, text: "", cls: "bad" });
   if (m !== before && m >= 0) {
     S.moneyBorn++;
+    V.forEach((p) => (p.hop = 1));
+    burst(SQUARE.x, 7, SQUARE.z, 50, [1, 0.85, 0.35], 8, 1.2, 0.5);
     S.banners.push({ title: `${pic(m)} ${cap(GOODS[m])} is money now`, text: before >= 0 ? `It replaced ${GOODS[before]}. Nobody decided it.` : "Nobody decided it. People just started taking it.", cls: "gold", sound: "money" });
   } else if (m < 0 && before >= 0) S.banners.push({ title: `${cap(GOODS[before])} stopped being money`, text: "The town is bartering again. What will it trust next?", cls: "bad" });
   if (g !== shopWas) S.banners.push({ title: `The shipwright now takes ${pic(g)} ${GOODS[g]}`, text: `Your ${GOODS[shopWas]} no longer buys boat parts.`, cls: "bad", sound: "deny" });
@@ -1872,7 +1891,7 @@ function showBanners() {
     el.classList.add("hidden");
     if (S) S.showing = false;
     if (S) setTimeout(showBanners, 160);
-  }, 3400);
+  }, 3000);
 }
 
 let toastTimer = null;
@@ -1936,6 +1955,14 @@ function drawChart() {
 
 function finish(won) {
   S.ended = true;
+  if (won) {
+    try {
+      localStorage.setItem("mintless-crown", "1");
+    } catch {
+      // the crown simply lasts this session
+    }
+    hero.wear.crown.visible = true;
+  }
   stopFishing();
   closePanel();
   S.banners = [];
@@ -2045,6 +2072,7 @@ function startRun(kind) {
   $("tip").classList.add("hidden");
   if (touchDevice) $("touch").classList.remove("hidden");
   view.mode = "roam";
+  cam.slow = 1.7;
   if (kind === "mystery") toast(`Island #${seed}. Different goods last, so nobody knows what becomes money here.`);
   else say(null, "Your boat broke. Nobody here uses coins. Follow the gold trail.");
   renderHud();
@@ -2097,7 +2125,7 @@ function boot() {
   GOOD_GEO = GOODS.map((_, g) => goodGeo(g));
   ICONS = GOOD_GEO.map((g) => iconOf(g));
 
-  crowd = makeCrowd(scene, SALT_TOWN.roles);
+  crowd = makeCrowd(scene, SALT_TOWN.roles, tier > 0);
   const seen = {};
   SALT_TOWN.roles.forEach((r) => {
     for (let k = 0; k < r.count; k++) {
@@ -2109,16 +2137,23 @@ function boot() {
 
   hero = makeHero();
   scene.add(hero.root);
+  try {
+    hero.wear.crown.visible = localStorage.getItem("mintless-crown") === "1";
+  } catch {
+    hero.wear.crown.visible = false;
+  }
   hero.body.add(stack.group);
   stack.group.position.set(0, 0.86, -0.72);
   GOOD_GEO.forEach((g) => {
     const m = new THREE.InstancedMesh(g, toon, 16);
     m.count = 0;
     m.frustumCulled = false;
+    m.renderOrder = 2;
     stack.group.add(m);
     stack.lists.push(m);
   });
   duck = makeDuck();
+  duck.root.traverse((o) => (o.renderOrder = 2));
   scene.add(duck.root);
   boat = makeBoat();
   scene.add(boat.root);

@@ -76,7 +76,7 @@ const smileGeo = (() => {
 })();
 
 // All villagers. `set(i, x, y, z, ry, sy, blink)` poses one for this frame.
-export function makeCrowd(scene, roles, spotsOf) {
+export function makeCrowd(scene, roles, lines = true) {
   const groups = [];
   const lookup = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
@@ -89,6 +89,7 @@ export function makeCrowd(scene, roles, spotsOf) {
       const body = new THREE.InstancedMesh(g, toon, count);
       const line = new THREE.InstancedMesh(g, ink, count);
       body.frustumCulled = line.frustumCulled = false;
+      line.visible = lines;
       scene.add(body, line);
       groups.push({ role: r.key, body, line, k, used: 0 });
     });
@@ -157,8 +158,8 @@ export function makeHero() {
   const torso = inked(t.build(), body);
   torso.frustumCulled = false;
   // A pale outline of you, drawn only where something stands in front.
-  const ghost = new THREE.Mesh(torso.geometry, new THREE.MeshBasicMaterial({ color: 0x8fe6ff, transparent: true, opacity: 0.6, depthFunc: THREE.GreaterDepth, depthWrite: false }));
-  ghost.renderOrder = 6;
+  const ghost = new THREE.Mesh(torso.geometry, new THREE.MeshBasicMaterial({ color: 0x4fc8f5, depthFunc: THREE.GreaterDepth, depthWrite: false }));
+  ghost.renderOrder = 1;
   ghost.frustumCulled = false;
   body.add(ghost);
 
@@ -201,6 +202,9 @@ export function makeHero() {
   }
   wear.crown = inked(crown.build(), body);
   for (const k in wear) wear[k].visible = false;
+  root.traverse((o) => {
+    if (o.isMesh && o !== ghost) o.renderOrder = 2;
+  });
 
   return { root, body, armL, armR, legL, legR, eyes, torso, wear };
 }
@@ -309,7 +313,8 @@ export function makeBoat() {
   const hullC = hex("#c98a56"), rim = hex("#ff6b5a"), deck = hex("#e8bb86");
   const wrecked = brush();
   wrecked.at(0, 0, 0, 0.1, 1, 0.05, 0.3);
-  wrecked.loft([{ y: 0.1, x: 1.6, z: 0.5 }, { y: 0.8, x: 3.1, z: 1.1 }, { y: 1.3, x: 3.5, z: 1.3 }], hullC, { n: 1.35, seg: 16, top: false, bottom: true, lump: 0.08 });
+  wrecked.loft([{ y: 0.1, x: 1.6, z: 0.5 }, { y: 0.8, x: 3.1, z: 1.1 }, { y: 1.3, x: 3.5, z: 1.3 }, { y: 1.38, x: 3.3, z: 1.12, c: rim }, { y: 0.7, x: 2.6, z: 0.82, c: hex("#7c5238") }], hullC, { n: 1.35, seg: 16, bottom: true, lump: 0.05 });
+  wrecked.rod([0.3, 0.7, 0], [1.2, 3.1, 0.4], 0.13, 0.09, hex("#a86a42"));
   wrecked.at(-4.4, 0.4, 1.2, 0.7).block(0, 0, 0, 2, 0.14, 0.5, hullC).at(2.4, 0.3, 2.5, -0.5).block(0, 0, 0, 1.6, 0.14, 0.4, deck).at(-1.5, 0.4, -2.6, 1.1).rod([0, 0, 0], [2.6, 0.4, 0.2], 0.1, 0.08, hex("#a86a42"));
   const wreck = inked(wrecked.build(), root);
   const stage = (paint) => {
@@ -321,8 +326,7 @@ export function makeBoat() {
     return m;
   };
   const hull = stage((b) => {
-    b.loft([{ y: 0.1, x: 1.6, z: 0.5, c: hex("#a86a42") }, { y: 0.8, x: 3.2, z: 1.15 }, { y: 1.4, x: 3.7, z: 1.35 }, { y: 1.56, x: 3.72, z: 1.37, c: rim }, { y: 1.68, x: 3.7, z: 1.35, c: rim }], hullC, { n: 1.35, seg: 18, top: false, bottom: true });
-    b.loft([{ y: 1.2, x: 3.4, z: 1.2 }, { y: 1.25, x: 3.4, z: 1.2 }], deck, { n: 1.35, seg: 18, shade: 0 });
+    b.loft([{ y: 0.1, x: 1.6, z: 0.5, c: hex("#a86a42") }, { y: 0.8, x: 3.2, z: 1.15 }, { y: 1.4, x: 3.7, z: 1.35 }, { y: 1.56, x: 3.72, z: 1.37, c: rim }, { y: 1.68, x: 3.7, z: 1.35, c: rim }, { y: 1.7, x: 3.48, z: 1.14, c: rim }, { y: 1.25, x: 3.4, z: 1.08, c: deck }], hullC, { n: 1.35, seg: 18, bottom: true });
   });
   const mast = stage((b) => {
     b.rod([0.2, 1.2, 0], [0.2, 7.2, 0], 0.15, 0.1, hex("#a86a42"));

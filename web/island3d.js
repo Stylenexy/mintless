@@ -17,15 +17,15 @@ export const VILLAGES = [
   { good: 4, role: "logger", name: "Forest Camp", x: 60, z: 19 },
 ];
 export const SQUARE = { x: 58, z: 64, name: "Market Square" };
-export const CAMP = { x: 52, z: 103, name: "Wreck Beach" };
-export const WRECK = { x: 40, z: 112 };
+export const CAMP = { x: 50, z: 107, name: "Wreck Beach" };
+export const WRECK = { x: 37, z: 114 };
 export const riverX = (z) => 83 + Math.sin(z / 17) * 5;
 export const BRIDGES = [
   { x: riverX(46), z: 46 },
   { x: riverX(90), z: 90 },
 ];
 export const DOCKS = [
-  { x: 62, z: 113, dx: 0, dz: 1, name: "Beach pier", len: 12 },
+  { x: 62, z: 114, dx: 0, dz: 1, name: "Beach pier", len: 12 },
   { x: riverX(66) - 5.4, z: 66, dx: 1, dz: 0, name: "River steps", len: 3.4 },
   { x: 112, z: 104, dx: 0.5, dz: 0.87, name: "Harbor pier", len: 13 },
 ];
@@ -33,7 +33,7 @@ export const DOCKS = [
 // Road network, for painting and for the golden trail.
 export const NODES = {
   camp: [CAMP.x, CAMP.z], square: [SQUARE.x, SQUARE.z], salt: [24, 84], weaver: [25, 42], forest: [60, 19],
-  rice: [108, 44], harbor: [106, 94], north: [BRIDGES[0].x, 46], south: [BRIDGES[1].x, 90], pier: [62, 110], steps: [DOCKS[1].x - 1, 66],
+  rice: [108, 44], harbor: [106, 94], north: [BRIDGES[0].x, 46], south: [BRIDGES[1].x, 90], pier: [62, 112], steps: [DOCKS[1].x - 1, 66],
   northW: [BRIDGES[0].x - 9, 46], northE: [BRIDGES[0].x + 9, 46], southW: [BRIDGES[1].x - 9, 90], southE: [BRIDGES[1].x + 9, 90],
   wreck: [WRECK.x + 5, 105], hp: [108, 100],
 };
@@ -51,17 +51,17 @@ const shore = (x, z) => {
 const PADS = [
   ...VILLAGES.map((v) => [v.x, v.z, 13, 1.35]),
   [SQUARE.x, SQUARE.z, 13, 1.5],
-  [CAMP.x, CAMP.z, 8, 0.95],
+  [CAMP.x, CAMP.z, 7, 0.82],
 ];
 
 function rawHeight(x, z) {
   const l = shore(x, z);
   let h;
-  if (l < 0) h = Math.max(-7, l * 0.42);
-  else if (l < 7) h = sstep(0, 7, l) * 1.15;
+  if (l < 0) h = Math.max(-7, l > -5 ? l * 0.42 : -2.1 + (l + 5) * 1.1);
+  else if (l < 13) h = sstep(0, 13, l) * 1.15;
   else {
     const hill = Math.max(0, smooth(x + 300, z + 90, 22) * 0.7 + smooth(x + 7, z + 51, 9) * 0.3 - 0.5);
-    h = 1.15 + hill * sstep(7, 16, l) * 15;
+    h = 1.15 + hill * sstep(13, 22, l) * 15;
   }
   const peak = Math.hypot(x - 94, z - 17);
   if (l > 0) h += sstep(16, 3, peak) * 5.2;
@@ -363,8 +363,14 @@ export function buildIsland(scene, tier) {
         for (let k = 0; k < (rich ? 7 : 5); k++) {
           const x = cx - 6.5 + ((i + 0.5) * 13) / (rich ? 7 : 5), z = cz - 5 + ((k + 0.5) * 10) / (rich ? 7 : 5), y = heightAt(x, z);
           if (y < 0.1) continue;
-          b.at(x, y, z, i * k).sway(0.8).loft([{ y: 0, x: 0.34 }, { y: 0.55, x: 0.44 }, { y: 0.95, x: 0.1 }], (i + k) % 3 ? C.straw : hex("#b8d65a"), { seg: 5, shade: 0.3 });
-          b.sway(0);
+          const leaf = (i + k) % 3 ? C.straw : hex("#b8d65a");
+          soft.sway(0.8);
+          for (let t = 0; t < 4; t++) {
+            const a = t * 1.57 + i, r = 0.26;
+            soft.at(x + Math.cos(a) * r, y - 0.05, z + Math.sin(a) * r, a, 1, Math.cos(a) * 0.16, Math.sin(a) * 0.16);
+            soft.loft([{ y: 0, x: 0.1 }, { y: 0.8, x: 0.07 }, { y: 1.35, x: 0.015 }], leaf, { seg: 4, shade: 0.4 });
+          }
+          soft.sway(0);
         }
   }
   {
@@ -423,12 +429,12 @@ export function buildIsland(scene, tier) {
   {
     const v = CAMP;
     tent(v.x + 6, v.z - 7, -0.6, C.trim);
-    const fx = v.x - 1, fz = v.z - 3, y = heightAt(fx, fz);
+    const fx = v.x + 1, fz = v.z - 4, y = heightAt(fx, fz);
     for (let i = 0; i < 7; i++) rock(fx + Math.cos(i * 0.9) * 1, fz + Math.sin(i * 0.9) * 1, 0.28);
     b.at(fx, y, fz).sway(0).rod([-0.5, 0.05, 0], [0.5, 0.4, 0.1], 0.1, 0.08, C.bark2).rod([0.5, 0.05, -0.2], [-0.4, 0.4, 0.2], 0.1, 0.08, C.bark);
     solid(fx, fz, 0.9);
     // hammock between two palms
-    const hx = v.x + 13, hz = v.z - 1;
+    const hx = v.x + 14, hz = v.z + 2;
     palm(hx - 3, hz, 0.9);
     palm(hx + 3, hz + 0.6, 1);
     const hy = heightAt(hx, hz);
@@ -515,7 +521,7 @@ export function buildIsland(scene, tier) {
     const y = heightAt(x, z);
     if (l < 1 || y < 0.3 || !clear(x, z, 1.6)) continue;
     const near = Math.hypot(x - vs.logger.x, z - vs.logger.z);
-    if (l < 9) palm(x, z, 0.85 + noise2(i, 3) * 0.3);
+    if (l < 15) palm(x, z, 0.8 + noise2(i, 3) * 0.3);
     else if (near < 26 || y > 3) pine(x, z, 0.95 + noise2(i, 5) * 0.55);
     else tree(x, z, 0.85 + noise2(i, 5) * 0.5);
     planted++;
@@ -572,17 +578,17 @@ export function buildIsland(scene, tier) {
 function cloudTexture() {
   const S = 128;
   const d = new Uint8Array(S * S * 4);
-  const wrap = (v) => ((v % 32) + 32) % 32;
-  const n = (x, y) => {
+  const n = (x, y, p) => {
     const ix = Math.floor(x), iy = Math.floor(y), tx = x - ix, ty = y - iy;
-    const a = noise2(wrap(ix), wrap(iy)), b = noise2(wrap(ix + 1), wrap(iy)), c = noise2(wrap(ix), wrap(iy + 1)), e = noise2(wrap(ix + 1), wrap(iy + 1));
+    const w = (v) => ((v % p) + p) % p;
+    const a = noise2(w(ix), w(iy)), b = noise2(w(ix + 1), w(iy)), c = noise2(w(ix), w(iy + 1)), e = noise2(w(ix + 1), w(iy + 1));
     const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
     return a + (b - a) * sx + (c - a) * sy + (a - b - c + e) * sx * sy;
   };
   for (let y = 0; y < S; y++)
     for (let x = 0; x < S; x++) {
       const u = (x / S) * 32, v = (y / S) * 32;
-      const a = n(u / 4, v / 4) * 0.55 + n(u / 2, v / 2) * 0.3 + n(u, v) * 0.15;
+      const a = n(u / 4, v / 4, 8) * 0.55 + n(u / 2, v / 2, 16) * 0.3 + n(u, v, 32) * 0.15;
       const i = (x + y * S) * 4;
       d[i] = d[i + 1] = d[i + 2] = a * 255;
       d[i + 3] = 255;
@@ -644,9 +650,9 @@ function paintGround(size, paint, shadows) {
     const h = heightAt(x, z);
     if (h < 0.95) continue;
     const dark = noise2(i, 3) < 0.55;
-    g.strokeStyle = dark ? "rgba(36,120,86,.22)" : "rgba(226,255,170,.3)";
-    g.lineWidth = k * 0.1;
-    const l = k * (0.2 + noise2(i, 4) * 0.25);
+    g.strokeStyle = dark ? "rgba(36,120,86,.15)" : "rgba(226,255,170,.2)";
+    g.lineWidth = k * 0.07;
+    const l = k * (0.14 + noise2(i, 4) * 0.2);
     g.beginPath();
     g.moveTo(x * k, z * k);
     g.lineTo(x * k + l * 0.4, z * k - l);
@@ -755,7 +761,7 @@ function paintGround(size, paint, shadows) {
   for (const [x, z, r] of shadows) {
     const cx = (x + r * 0.35) * k, cz = (z + r * 0.3) * k, rad = r * 1.25 * k;
     const grad = g.createRadialGradient(cx, cz, rad * 0.25, cx, cz, rad);
-    grad.addColorStop(0, "rgba(28,34,92,.34)");
+    grad.addColorStop(0, "rgba(28,34,92,.24)");
     grad.addColorStop(1, "rgba(28,34,92,0)");
     g.fillStyle = grad;
     g.beginPath();
@@ -796,8 +802,8 @@ function makeTerrain(map, noise) {
       varying vec2 vUv; varying vec3 vW; varying float vD;
       void main() {
         vec3 c = texture2D(tMap, vUv).rgb * uGround;
-        float s = texture2D(tNoise, vW.xz * 0.008 + vec2(uTime * 0.006, uTime * 0.0025)).r;
-        c *= 1.0 - uCloud * smoothstep(0.5, 0.64, s);
+        float s = texture2D(tNoise, vW.xz * 0.0024 + vec2(uTime * 0.0022, uTime * 0.001)).r;
+        c *= 1.0 - uCloud * smoothstep(0.46, 0.62, s);
         gl_FragColor = vec4(mix(c, uFog, smoothstep(uFogNear, uFogFar, vD)), 1.0);
       }`,
   });
@@ -835,7 +841,7 @@ function makeWater(noise) {
       varying vec3 vW; varying float vD;
       void main() {
         vec2 uv = vW.xz / 128.0;
-        float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
+        float inside = smoothstep(0.0, 0.05, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
         float depth = mix(1.0, texture2D(tDepth, uv).r, inside) * 6.0;
         float n1 = texture2D(tNoise, vW.xz * 0.018 + vec2(uTime * 0.012, uTime * 0.008)).r;
         float n2 = texture2D(tNoise, vW.xz * 0.04 - vec2(uTime * 0.016, -uTime * 0.01)).r;
@@ -843,15 +849,15 @@ function makeWater(noise) {
         vec3 c = mix(uShallow, uMid, smoothstep(0.1, 1.2, d));
         c = mix(c, uDeep, smoothstep(1.2, 4.6, d));
         float n3 = texture2D(tNoise, vW.xz * 0.11 + vec2(-uTime * 0.02, uTime * 0.013)).r;
-        float ripple = smoothstep(0.5, 0.54, n2 * 0.5 + n3 * 0.5) * (1.0 - smoothstep(0.54, 0.58, n2 * 0.5 + n3 * 0.5));
-        c += ripple * 0.09;
+        float mixn = n2 * 0.5 + n3 * 0.5;
+        float ripple = smoothstep(0.5, 0.525, mixn) * (1.0 - smoothstep(0.525, 0.55, mixn));
+        c += ripple * (0.1 + uChop * 0.12);
         float wave = sin(d * 6.0 - uTime * 1.4 + n2 * 5.0);
         float foam = smoothstep(0.62, 0.92, wave) * smoothstep(1.5, 0.3, d) * 0.75;
         foam += smoothstep(0.2, 0.05, d);
-        float glint = smoothstep(0.66, 0.7, n3 + n2 * 0.3 + uChop * 0.05) * 0.2;
-        c = mix(c, vec3(1.0), min(1.0, foam + glint));
+        c = mix(c, vec3(1.0), min(1.0, foam));
         c *= uTint;
-        float a = smoothstep(0.0, 0.32, d) * 0.5 + 0.5;
+        float a = smoothstep(0.03, 0.14, depth) * (smoothstep(0.1, 0.5, depth) * 0.45 + 0.55);
         gl_FragColor = vec4(mix(c, uFog, smoothstep(uFogNear * 1.2, uFogFar * 1.3, vD)), a);
       }`,
   });
