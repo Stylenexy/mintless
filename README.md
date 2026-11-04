@@ -1,8 +1,8 @@
 # Mintless: the town that picks its own money
 
-In 2016 one Growtopia Diamond Lock sold for Rp100,000. In 2026 it sells for Rp299: savings in a game currency, gone, because someone kept printing. Mintless is the opposite: an island on NEAR with no coins and no printer. 40 villagers barter salt, fish, rice, cloth and wood. Nobody tells them what money is. Within days one good becomes money on its own, and one storm can replace it. Nobody, including the developer, can create a single extra unit.
+In 2016 one Growtopia Diamond Lock sold for Rp100,000. In 2026 it sells for Rp299: savings in a game currency, gone, because someone kept printing.
 
-You wash up on an island with no coins and a broken boat. Fish, swap goods with forty villagers, and pay the shipwright in whatever the town takes most, before the tenth night. A storm is coming, and the money can change under your feet. You feel what a Growtopia Diamond Lock holder felt, except here nobody printed anything: the town did it, and reading the town could have saved you.
+Mintless is the opposite. You wash up on an island with no coins and a broken boat. 40 villagers barter salt, fish, rice, cloth and wood, and within days they all start taking one good: money, born on its own. You save it for your boat. Then a storm rots it, the town moves on to cloth, and your savings stop being money overnight. Nobody decided that, and nobody, including the developer, can print a single extra unit. The town did it, and reading the town could have saved you.
 
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
 Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a separate project.
@@ -11,7 +11,7 @@ Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a s
 
 *A village in third person. Green bubbles show who can swap with you right now. The camera glides out to a 3/4 view on the road and down to first person when you fish.*
 
-![15 seconds of play: the island, riding the duck, fishing, a village, the storm](docs/demo.gif)
+![The storm lands, the morning bill says your 7 salt stopped being money, then 6 seconds of play: the island, the duck, fishing](docs/demo.gif)
 
 ## Judges: one command
 
