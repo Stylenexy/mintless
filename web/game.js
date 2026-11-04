@@ -76,7 +76,7 @@ let V = [];
 
 const cam = {
   focus: new THREE.Vector3(64, 2, 64), fv: new THREE.Vector3(),
-  dist: 104, dv: 0, pitch: 0.62, pv: 0, yaw: 0.5, yv: 0, fov: 38, fovv: 0, shake: 0, slow: 0,
+  dist: 104, dv: 0, pitch: 0.62, pv: 0, yaw: 0.5, yv: 0, fov: 38, fovv: 0, shake: 0, slow: 0, lift: 0, liftV: 0,
 };
 const view = { mode: "orbit", zoom: 26, yaw: 0, drag: null, freeMix: 0, freeMixV: 0, free: { pos: new THREE.Vector3(), yaw: 0, pitch: -0.6 } };
 
@@ -407,7 +407,7 @@ function lineFor(i) {
   const ev = rainEvent();
   if (ag.holds === ag.needs) return `This ${GOODS[ag.needs]} is my dinner. Come back tomorrow.`;
   const wants = wantsOf(town, ag);
-  if (ev && !raining() && rainGood() >= 0 && town.day >= (ev.decideDay ?? 0) && noise2(i, town.day) < 0.5) return `Storm after day ${stormDay()}. ${cap(GOODS[rainGood()])} won't last.`;
+  if (ev && !raining() && rainGood() >= 0 && town.day >= (ev.decideDay ?? 8) && noise2(i, town.day) < 0.5) return `Storm after day ${stormDay()}. ${cap(GOODS[rainGood()])} won't last.`;
   if (raining() && rainGood() >= 0 && m !== rainGood()) return `${cap(GOODS[rainGood()])}? Nobody wants that wet stuff now.`;
   if (m >= 0 && wants.includes(m) && ag.needs !== m && ag.makes !== m) return `I never use ${GOODS[m]}. But everybody takes it, so I do too.`;
   if (!wants.length) return "I have nothing to trade today.";
@@ -632,19 +632,21 @@ function placeCamera(dt) {
   [cam.yaw, cam.yv] = dampAngle(cam.yaw, goal.yaw, cam.yv, goal.smooth, dt);
   [cam.fov, cam.fovv] = damp(cam.fov, goal.fov, cam.fovv, goal.smooth, dt);
 
-  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
-  let dist = cam.dist;
+  // A wall between you and the lens: rise over the roof instead of cutting through it.
+  let blockedView = false;
   if (view.mode === "third") {
-    // keep walls out of the shot: walk from the head outward
-    for (let k = 1; k <= 10; k++) {
-      const d = (k / 10) * dist;
-      const x = cam.focus.x + Math.sin(cam.yaw) * cp * d, z = cam.focus.z + Math.cos(cam.yaw) * cp * d;
-      if (hitSolid(x, z, 0.4)) {
-        dist = Math.max(2.4, d - 1);
+    for (let k = 2; k <= 10; k++) {
+      const d = (k / 10) * cam.dist * Math.cos(cam.pitch);
+      if (hitSolid(cam.focus.x + Math.sin(cam.yaw) * d, cam.focus.z + Math.cos(cam.yaw) * d, 0.7)) {
+        blockedView = true;
         break;
       }
     }
   }
+  [cam.lift, cam.liftV] = damp(cam.lift, blockedView ? 1 : 0, cam.liftV, 0.3, dt);
+  const pitchNow = cam.pitch + cam.lift * 0.62;
+  const cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+  const dist = cam.dist;
   eye.set(cam.focus.x + Math.sin(cam.yaw) * cp * dist, cam.focus.y + sp * dist, cam.focus.z + Math.cos(cam.yaw) * cp * dist);
   const floor = groundAt(clamp(eye.x, 0, SIZE - 1), clamp(eye.z, 0, SIZE - 1));
   eye.y = Math.max(eye.y, Math.max(0.4, floor + 0.9));
@@ -819,8 +821,13 @@ function frame(now) {
   const dt = Math.min(0.05, ms / 1000);
   last = now;
   watchSpeed(ms);
-  update(dt, now);
-  render(now / 1000, dt);
+  // A bad frame should never freeze the whole game.
+  try {
+    update(dt, now);
+    render(now / 1000, dt);
+  } catch (err) {
+    console.error(err);
+  }
   requestAnimationFrame(frame);
 }
 
@@ -1949,7 +1956,7 @@ function applyNight() {
   } else if (m < 0 && before >= 0) S.banners.push({ title: `${cap(GOODS[before])} stopped being money`, text: "The town is bartering again. What will it trust next?", cls: "bad" });
   if (g !== shopWas) S.banners.push({ title: `The shipwright now takes ${pic(g)} ${GOODS[g]}`, text: `Your ${GOODS[shopWas]} no longer buys boat parts.`, cls: "bad", sound: "deny" });
   const ev = rainEvent();
-  if (ev && !S.told && rainGood() >= 0 && town.day >= (ev.decideDay ?? 0) && town.day < ev.day) {
+  if (ev && !S.told && rainGood() >= 0 && town.day >= (ev.decideDay ?? 8) && town.day < ev.day) {
     S.told = true;
     S.banners.push({ title: `Storm after day ${stormDay()}`, text: `It will soak ${GOODS[rainGood()]}, the good people hoard most. Spend it or swap it before then.`, cls: "bad", sound: "thunder" });
   }
@@ -2153,7 +2160,7 @@ function renderHud() {
   $("town-money").innerHTML = m >= 0 ? `${pic(m)} ${cap(GOODS[m])} is money` : `<span class="no">No money yet</span>`;
   const ev = rainEvent();
   const chip = $("storm-chip");
-  if (ev && !raining() && rainGood() >= 0 && town.day >= (ev.decideDay ?? 9)) {
+  if (ev && !raining() && rainGood() >= 0 && town.day >= (ev.decideDay ?? 8)) {
     const left = stormDay() - dayNum();
     chip.innerHTML = `Storm ${left > 0 ? `in ${left} day${left > 1 ? "s" : ""}` : "tonight"}: soaks ${pic(rainGood())} ${GOODS[rainGood()]}`;
     chip.classList.remove("hidden");
