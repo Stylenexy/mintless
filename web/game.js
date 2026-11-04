@@ -175,6 +175,7 @@ function newRun(kind, seed) {
   for (const m of boat.parts) m.visible = false;
   boat.wreck.visible = true;
   boat.root.position.set(WRECK.x, -0.1, WRECK.z);
+  boat.root.rotation.z = 0;
   for (const m of miraBoat.parts) m.visible = false;
   miraBoat.wreck.visible = true;
   miraBoat.root.visible = true;
@@ -938,6 +939,8 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     return;
   }
+  if (e.repeat && !KEYMAP[k]) return;
+  if (k === "Enter") e.preventDefault();
   if (KEYMAP[k]) {
     held.add(KEYMAP[k]);
     e.preventDefault();
@@ -1390,8 +1393,9 @@ function renderYard() {
   $("yard-take").innerHTML = `${c && c.had && c.day === dayNum() ? `<p class="quote"><s>Yesterday you had ${c.had} ${GOODS[c.good]}.</s> Today I can't use it.</p>` : ""}Today I take ${pic(g)} <b>${GOODS[g]}</b>, because everyone does. You have <b>${me.bag[g]}</b>.`;
   const part = nextPart(me);
   const rows = [];
-  if (part) rows.push({ cls: "next", key: "part", name: `Boat part ${me.parts + 1} of ${PARTS.length}: ${part.name}`, what: "Fix all four and you can sail away", cost: part.cost });
-  for (const c of GEAR) if (!me.gear[c.key]) rows.push({ cls: "", key: c.key, name: c.name, what: c.what, cost: c.cost });
+  if (!me.gear.duck) rows.push({ cls: "next", key: "duck", name: GEAR[0].name, what: GEAR[0].what, cost: GEAR[0].cost });
+  if (part) rows.push({ cls: me.gear.duck ? "next" : "", key: "part", name: `Boat part ${me.parts + 1} of ${PARTS.length}: ${part.name}`, what: "Fix all four and you can sail away", cost: part.cost });
+  for (const c of GEAR.slice(1)) if (!me.gear[c.key]) rows.push({ cls: "", key: c.key, name: c.name, what: c.what, cost: c.cost });
   $("yard-items").innerHTML = rows
     .map((r, k) => `<div class="item ${r.cls}"><div><b>${r.name}</b><span>${r.what}</span></div><button class="btn ${me.bag[g] >= r.cost ? "primary" : ""}" data-buy="${r.key}" ${me.bag[g] < r.cost ? 'aria-disabled="true"' : ""}>${r.cost} ${pic(g)}</button></div>`)
     .join("");
@@ -1632,7 +1636,8 @@ function initFishing() {
 function startFishing(o) {
   const d = o.d;
   S.you.vx = S.you.vz = 0;
-  if (S.you.riding) toggleDuck();
+  S.you.riding = false;
+  duck.root.visible = false;
   S.you.x = o.x;
   S.you.z = o.z;
   S.you.dir = Math.atan2(d.dx, d.dz);
@@ -1647,6 +1652,7 @@ function startFishing(o) {
     $("fish-pads").classList.remove("hidden");
     $("t-left").classList.add("hidden");
     $("t-right").classList.add("hidden");
+    $("t-hold").classList.remove("hidden");
     $("t-hold").textContent = "Cast";
   }
   rod.visible = true;
@@ -1654,9 +1660,13 @@ function startFishing(o) {
   renderFish();
 }
 
+// The river is narrow, the piers look out to sea.
+const castBase = (d) => (d.len < 5 ? 2 : 6);
+const castSpan = (d) => (d.len < 5 ? 3 : 16);
+
 function placeTarget() {
   const f = S.fish, d = f.dock;
-  f.far = 7 + f.zone * 15;
+  f.far = castBase(d) + f.zone * castSpan(d);
   f.tx = f.ex + d.dx * f.far + d.dz * (Math.random() - 0.5) * 3;
   f.tz = f.ez + d.dz * f.far - d.dx * (Math.random() - 0.5) * 3;
   ring.visible = true;
@@ -1706,7 +1716,7 @@ function cast() {
   const miss = Math.abs(f.pow - f.zone);
   f.castQ = clamp(1 - miss / 0.42, 0, 1);
   f.perfect = miss < 0.08;
-  const dist = 6 + f.pow * 16.5;
+  const dist = castBase(d) + f.pow * castSpan(d);
   f.bx = f.ex + d.dx * dist + (f.tx - f.ex - d.dx * f.far) * (1 - miss);
   f.bz = f.ez + d.dz * dist + (f.tz - f.ez - d.dz * f.far) * (1 - miss);
   f.stage = "fly";
@@ -1959,6 +1969,8 @@ function updateFishing(dt) {
     push = f.tension * 0.12;
     $("line-bar").style.width = `${Math.min(100, f.tension * 100)}%`;
     $("reel-bar").style.width = `${Math.min(100, f.reel * 100)}%`;
+    $("t-left").classList.toggle("go", f.pull === 1);
+    $("t-right").classList.toggle("go", f.pull === -1);
     $("pull-l").className = `pull left ${f.pull === 1 ? "go" : ""} ${hold < 0 ? "hold" : ""}`;
     $("pull-r").className = `pull right ${f.pull === -1 ? "go" : ""} ${hold > 0 ? "hold" : ""}`;
     fishLine.material.color.setRGB(1, 1 - f.tension * 0.8, 1 - f.tension * 0.9);
@@ -2090,9 +2102,6 @@ function applyNight() {
   S.ver++;
   const lost = r.lost.reduce((a, b) => a + b, 0);
   S.lost += lost;
-  r.lost.forEach((u, g) => {
-    if (u) document.querySelector(`.slot[data-g="${g}"]`)?.classList.add("loss");
-  });
   const m = money();
   const g = shop();
   S.log.push({ money: m, worth: worthNow(town, me) });
@@ -2135,6 +2144,9 @@ function applyNight() {
   miraBoat.wreck.visible = rival.parts === 0;
   rebuildStack();
   renderBag();
+  r.lost.forEach((u, g) => {
+    if (u) document.querySelector(`.slot[data-g="${g}"]`)?.classList.add("loss");
+  });
   void worthWas;
 }
 
@@ -2377,8 +2389,8 @@ function renderHud() {
 }
 
 // ------------------------------------------------------------ start
-function startRun(kind) {
-  const seed = kind === "salt" ? Number(qs.get("seed")) || 1 : crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
+function startRun(kind, again = null) {
+  const seed = again ?? (kind === "salt" ? Number(qs.get("seed")) || 1 : crypto.getRandomValues(new Uint32Array(1))[0] % 100000);
   unlockAudio();
   music(true);
   newRun(kind, seed);
@@ -2399,7 +2411,7 @@ $("play-next").addEventListener("click", () => startRun("mystery"));
 $("again").addEventListener("click", () => startRun("mystery"));
 $("replay").addEventListener("click", () => {
   $("end").classList.add("hidden");
-  startRun(S.kind);
+  startRun(S.kind, S.seed);
 });
 
 function iconOf(geo, size = 160, yaw = 0.7, tilt = 0.55, span = 0.72, centerY = 0.3) {
@@ -2561,6 +2573,8 @@ setInterval(() => {
   if (k >= 1) S.grow = null;
 }, 40);
 addEventListener("resize", resize);
+// A clicked HUD button must not keep focus, or Enter would press it again.
+document.addEventListener("click", (e) => e.target.closest?.("button")?.blur());
 boot();
 
 // ?debug exposes the live state for automated play-throughs; run(ms) advances

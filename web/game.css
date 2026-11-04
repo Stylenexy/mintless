@@ -134,6 +134,8 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 7p
 .fish-say { margin: 0; padding: 6px 20px; border-radius: 16px; background: var(--glass-2); font-size: 22px; font-weight: 700; text-align: center; }
 .fish-say.hot { background: var(--gold); color: #33240a; animation: thump 0.25s ease; }
 @keyframes thump { 50% { transform: scale(1.16); } }
+.fish-foot button { pointer-events: auto; }
+.pad.go { background: var(--gold); color: #33240a; border-color: #fff3c8; transform: scale(1.1); }
 .fish-foot { margin: 0; font-size: 15px; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); font-weight: 500; }
 .meter { position: relative; width: min(460px, 76vw); height: 24px; border-radius: 14px; background: var(--glass-2); border: 2px solid rgba(255, 255, 255, 0.5); overflow: hidden; }
 .meter .zone { position: absolute; top: 0; bottom: 0; background: var(--gold); opacity: 0.92; }
@@ -158,8 +160,8 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 7p
 .night h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 46px; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
 .night p { margin: 4px 0 0; font-size: 20px; max-width: 560px; }
 
-.modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(8, 14, 44, 0.42); z-index: 5; padding: 12px; overflow: auto; }
-.sheet { width: min(460px, 100%); padding: 18px 22px; background: var(--glass-2); }
+.modal { position: fixed; inset: 0; display: flex; background: rgba(8, 14, 44, 0.42); z-index: 5; padding: 12px; overflow: auto; }
+.sheet { width: min(460px, 100%); margin: auto; padding: 18px 22px; background: var(--glass-2); }
 .sheet.wide { width: min(700px, 100%); }
 .sheet h1, .sheet h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 30px; }
 .sheet-sub { margin: 4px 0 10px; color: #dbe8f6; font-size: 17px; font-weight: 500; }
@@ -261,6 +263,17 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 7p
   .fishing { bottom: 96px; }
   .fish-say { font-size: 18px; }
   .pull { display: none; }
+}
+@media (max-height: 520px) {
+  .bag { top: 8px; left: auto; right: 118px; flex-direction: row; }
+  .slot { width: 46px; height: 46px; }
+  .slot img { width: 28px; height: 28px; margin-top: -10px; }
+  .slot .count { font-size: 14px; }
+  .goal { width: min(300px, 42vw); }
+  .rival, .purse small { display: none; }
+  .mira-say { top: auto; bottom: 8px; left: 170px; }
+  .stick { width: 104px; height: 104px; left: 14px; bottom: 12px; }
+  .pads { right: 12px; bottom: 12px; flex-direction: row; align-items: flex-end; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tip, .place, .banner { animation: none; }

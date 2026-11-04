@@ -11,6 +11,8 @@ Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a s
 
 *A village in third person. Green bubbles show who can swap with you right now. The camera glides out to a 3/4 view on the road and down to first person when you fish.*
 
+![15 seconds of play: the island, riding the duck, fishing, a village, the storm](docs/demo.gif)
+
 ## Judges: one command
 
 Needs Node 20 or newer. No install, no keys, no account.
