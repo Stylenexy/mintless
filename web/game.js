@@ -534,7 +534,7 @@ function applyNight() {
   if (r.newMoney !== null) S.banners.push(moneyBanner(r.newMoney, before, r.report));
   const ev = rainEvent();
   if (ev && S.town.day === ev.day && rainGood() >= 0) {
-    S.banners.push({ kind: "rain", g: rainGood(), title: "The rains came", text: `${cap(GOOD_NAME[rainGood()])} gets damp now and loses ${ev.spoil}% every night.` });
+    S.banners.push({ kind: "rain", g: rainGood(), title: "The rainy season came", text: `It stays wet until the season ends. ${cap(GOOD_NAME[rainGood()])} now loses ${ev.spoil}% every night.` });
   }
   if (ev && ev.good === -1 && S.town.day === ev.decideDay) {
     S.banners.push({ kind: "rain", g: rainGood(), title: "Rain forecast", text: `The rain on day ${ev.day + 1} will soak ${GOOD_NAME[rainGood()]}, the good the town holds most today.` });
@@ -554,6 +554,7 @@ function finishNight() {
   if (--S.queue > 0) return startNight();
   S.busy = false;
   const log = S.nightLog;
+  $("last").textContent = nightLine(log);
   if (log.length === 1) {
     const r = log[0];
     const rot = r.lost.map((u, g) => (u ? `${u} ${GOOD_NAME[g]}` : "")).filter(Boolean).join(", ");
@@ -561,6 +562,16 @@ function finishNight() {
   } else toast(`${log.length} days passed. Your family ate on ${log.filter((r) => r.ate).length} of ${log.length} nights.`);
   showBanners();
   renderHud();
+}
+
+// One plain line under the bag, so the numbers going up and down add up.
+function nightLine(log) {
+  const lost = GOOD_NAME.map((_, g) => log.reduce((sum, r) => sum + r.lost[g], 0));
+  const parts = [`+${log.length * MAKES_PER_DAY} ${GOOD_NAME[S.me.makes]} made`];
+  lost.forEach((u, g) => u && parts.push(`${u} ${GOOD_NAME[g]} rotted`));
+  const ate = log.filter((r) => r.ate).length;
+  if (ate) parts.push(`${ate} ${GOOD_NAME[S.me.needs]} eaten`);
+  return `${log.length > 1 ? `Last ${log.length} nights` : "Last night"}: ${parts.join(", ")}`;
 }
 
 function moneyBanner(g, before, report) {

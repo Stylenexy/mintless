@@ -163,7 +163,7 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 
 - Game, engine, tests and scripts: plain JavaScript on Node.js built-ins, no npm dependencies.
 - Contract: Rust with `near-sdk` 5.30.0. Deploy tool only: `near-api-js` 7.4.0.
-- Fonts: Pixelify Sans (game) and Fraunces, Nunito, JetBrains Mono (lab page) from Google Fonts. All pixel art is drawn in code in `web/pixel.js`; no image assets.
+- Fonts: Pixelify Sans and Press Start 2P for digits (game); Fraunces, Nunito, JetBrains Mono (lab page), all from Google Fonts. All pixel art is drawn in code in `web/pixel.js`; no image assets.
 - AI: code and documentation were written with an AI coding assistant (Claude Code), listed here as the hackathon rules ask. Every claim in this README is checked by the commands above.
 
 ## Team
