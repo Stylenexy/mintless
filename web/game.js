@@ -7,7 +7,7 @@ import { createTown, step } from "../engine/town.js";
 import { SALT_TOWN } from "../rules/town.js";
 import { mysteryRules } from "../engine/mystery.js";
 import { answer, wantsOf, offer } from "../engine/visitor.js";
-import { createRun, catchFish, shopGood, buyPart, buyGear, bestGive, routeTo, worthNow, nightFall, nextPart, boatDone, bagCount, playDay, PARTS, GEAR, DAYS, TOWN_DAYS_PER_NIGHT } from "../engine/island.js";
+import { createRun, catchFish, shopGood, buyPart, buyGear, bestGive, givesFor, routeTo, worthNow, nightFall, nextPart, boatDone, bagCount, playDay, PARTS, GEAR, DAYS, TOWN_DAYS_PER_NIGHT } from "../engine/island.js";
 import { U, toon, ink, inked, hex, noise2, brush, sstep } from "./kit.js";
 import { SIZE, VILLAGES, SQUARE, CAMP, WRECK, DOCKS, NODES, EDGES, buildIsland, heightAt, groundAt, hitSolid, makeSky, makeClouds, makeRain } from "./island3d.js";
 import { makeCrowd, makeHero, makeDuck, makeKeeper, makeBoat, goodGeo, fishGeo } from "./people.js";
@@ -159,8 +159,10 @@ function newRun(kind, seed) {
     you: { x: CAMP.x - 1, y: 1.2, z: CAMP.z + 4, vx: 0, vz: 0, vy: 0, air: false, dir: Math.PI * 0.9, walk: 0, moveT: 0, coyote: 0, sq: 1, sqv: 0, riding: false, landed: 0, dust: 0, step: 0 },
     clock: 0, wet: 0, panel: null, near: null, night: null, ended: false, ver: 1, seenVer: 0, stepInfo: null, place: "", book: loadBook(),
     log: [], lost: 0, peakLoss: 0, banners: [], showing: false, fish: null, speak: null, tips: {}, routeT: 0, route: [], sawRain: false, parting: null, firstFish: true, dockEnd,
-    moneyBorn: 0, rivalDone: 0, won: 0, swaps: 0, idle: 0, chat: 5, bottles: {}, duskTold: false, firstChain: 0,
+    moneyBorn: 0, rivalDone: 0, won: 0, swaps: 0, idle: 0, chat: 5, bottles: {}, duskTold: false, firstChain: 0, crash: null, pick: null, told: false,
+    mira: { x: MIRA.x - 5, z: MIRA.z, tx: MIRA.x - 5, tz: MIRA.z, ry: 1.5, walk: 0 }, miraT: FIRST_DAY_SECONDS * 0.3,
   };
+  mira.visible = true;
   S.firstChain = fishToGood(shop());
   for (const b of bottleMeshes) b.visible = true;
   hideAllPanels();
@@ -384,6 +386,65 @@ function updateVillagers(t, dt) {
   }
 }
 
+// Mira plays by day with the same rules and the same villagers. She walks to
+// whoever she swaps with, so you can see her get there first.
+function updateMira(dt) {
+  const r = S.rival;
+  if (S.rivalDone) return;
+  const m = S.mira;
+  const dx = m.tx - m.x, dz = m.tz - m.z, l = Math.hypot(dx, dz);
+  if (l > 0.3) {
+    const step = Math.min(l, 8 * dt);
+    m.x += (dx / l) * step;
+    m.z += (dz / l) * step;
+    m.ry = Math.atan2(dx, dz);
+    m.walk += dt * 11;
+  } else m.walk = 0;
+  mira.position.set(m.x, groundAt(m.x, m.z) + Math.abs(Math.sin(m.walk)) * 0.14, m.z);
+  mira.rotation.y = m.ry;
+  S.miraT -= dt;
+  if (S.miraT > 0) return;
+  S.miraT = dayLength() * 0.36;
+  const parts = r.parts;
+  const logged = r.log.length;
+  playDay(S.town, r, { casts: 1, score: 55, swaps: 2 });
+  S.ver++;
+  const last = r.log[r.log.length - 1];
+  if (r.log.length > logged && last) {
+    m.tx = V[last.index].x + 1.4;
+    m.tz = V[last.index].z + 1.4;
+  } else {
+    m.tx = MIRA.x - 5;
+    m.tz = MIRA.z;
+  }
+  if (r.parts > parts) {
+    toast(`Mira fixed her ${PARTS[r.parts - 1].name.toLowerCase()}: ${r.parts} of ${PARTS.length}.`);
+    miraBoat.wreck.visible = false;
+    miraBoat.parts.forEach((p, i) => (p.visible = i < r.parts));
+    S.routeT = 0;
+    if (boatDone(r)) {
+      S.rivalDone = dayNum();
+      miraBoat.root.visible = false;
+      mira.visible = false;
+      banner("Mira sailed away", "Her boat is gone. Yours is still on the sand.", "bad");
+    }
+  }
+}
+
+// The last evening before the storm: a clock, not just a warning.
+function stormClock() {
+  const ev = rainEvent();
+  const chip = $("storm-chip");
+  if (!ev || S.night || S.ended || rainGood() < 0 || raining() || dayNum() !== stormDay()) return chip.classList.remove("urgent");
+  const left = Math.ceil((1 - S.clock) * dayLength());
+  if (left === S.stormLeft) return;
+  S.stormLeft = left;
+  const g = rainGood();
+  chip.innerHTML = `Storm in ${left}s. You still hold ${S.me.bag[g]} ${pic(g)}`;
+  chip.classList.remove("hidden");
+  chip.classList.toggle("urgent", left <= 30);
+}
+
 function honk() {
   const you = S.you;
   if (!you.riding || !canWalk()) return;
@@ -416,10 +477,26 @@ function lineFor(i) {
   return "Deal?";
 }
 
+function giveFor(i) {
+  const opts = givesFor(S.town, S.me, i);
+  if (opts.includes(S.pick)) return S.pick;
+  return bestGive(S.town, S.me, i);
+}
+
+function cycleGive() {
+  if (S.near?.kind !== "trader") return;
+  const opts = givesFor(S.town, S.me, S.near.i);
+  if (opts.length < 2) return;
+  const at = opts.indexOf(giveFor(S.near.i));
+  S.pick = opts[(at + 1) % opts.length];
+  S.ver++;
+  sfx("open");
+}
+
 function trade(i) {
   const { town, me } = S;
   const p = V[i];
-  const give = bestGive(town, me, i);
+  const give = giveFor(i);
   if (give < 0) {
     p.hop = 0.5;
     sfx("deny");
@@ -707,6 +784,8 @@ function update(dt, now) {
   if (S.night) updateNight(dt);
   if (S.fish) updateFishing(dt);
   if (S.parting) updateParting(dt);
+  if (!paused && !S.night && !S.parting) updateMira(dt);
+  stormClock();
   if (view.mode === "free") updateFree(dt);
   findNear();
   S.routeT -= dt;
@@ -865,6 +944,10 @@ document.addEventListener("keydown", (e) => {
   } else if (k === "e" || k === "Enter") use();
   else if (k === "r") toggleDuck();
   else if (k === "q") honk();
+  else if (k === "Tab") {
+    cycleGive();
+    e.preventDefault();
+  }
   else if (k === "c") toggleFree();
   else if (k === "m") openPanel("map");
   else if (k === "n") toggleSound();
@@ -1033,8 +1116,12 @@ function readBottle(o) {
   sfx("buy");
   burst(o.x, 0.6, o.z, 18, [1, 1, 1], 4, 0.6, 0.5);
   const g = nextMoney();
-  const text = g < 0 ? "Nothing changes. Enjoy the quiet." : money() < 0 ? `Soon everyone here will take ${GOODS[g]}. Trust me.` : `When this money dies, they will all want ${GOODS[g]}. Trust me.`;
-  banner("A note in a bottle", `"${text}"`);
+  if (g < 0) return banner("A note in a bottle", `"Nothing changes. Enjoy the quiet."`);
+  // a lead, not the answer: the true next money beside the runner-up
+  const accept = S.town.history[S.town.history.length - 1].accept;
+  const alt = accept.map((a, k) => [a, k]).filter(([, k]) => k !== g && k !== money()).sort((a, b) => b[0] - a[0])[0][1];
+  const pair = g < alt ? `${GOODS[g]} or ${GOODS[alt]}` : `${GOODS[alt]} or ${GOODS[g]}`;
+  banner("A note in a bottle", `"${money() < 0 ? "They will settle on" : "When this money dies they will turn to"} ${pair}. Watch who starts taking it."`);
 }
 
 // ------------------------------------------------------------ objective, trail
@@ -1257,10 +1344,11 @@ function renderBubbles() {
       continue;
     }
     const wants = wantsOf(S.town, ag).sort((a, b) => (a === ag.needs ? -1 : b === ag.needs ? 1 : 0));
-    const give = bestGive(S.town, S.me, i);
+    const give = giveFor(i);
     el.className = `bub ${give >= 0 ? "can" : ""} ${near ? "near" : ""}`;
     const left = give >= 0 ? pic(give, "") : wants.slice(0, 2).map((g) => pic(g, "")).join("");
-    const hint = near && give >= 0 ? `<kbd>${touchDevice ? "Use" : "E"}</kbd>` : "";
+    const more = near && !touchDevice && givesFor(S.town, S.me, i).length > 1 ? "<kbd>Tab</kbd>" : "";
+    const hint = near && give >= 0 ? `${more}<kbd>${touchDevice ? "Use" : "E"}</kbd>` : "";
     el.innerHTML = `${hint}${left}<span class="ar">→</span>${pic(ag.holds, "")}`;
   }
 }
@@ -1294,7 +1382,8 @@ for (const b of document.querySelectorAll("[data-close]")) b.addEventListener("c
 function renderYard() {
   const { me } = S;
   const g = shop();
-  $("yard-take").innerHTML = `Today I take ${pic(g)} <b>${GOODS[g]}</b>, because everyone does. You have <b>${me.bag[g]}</b>.`;
+  const c = S.crash;
+  $("yard-take").innerHTML = `${c && c.had && c.day === dayNum() ? `<p class="quote"><s>Yesterday you had ${c.had} ${GOODS[c.good]}.</s> Today I can't use it.</p>` : ""}Today I take ${pic(g)} <b>${GOODS[g]}</b>, because everyone does. You have <b>${me.bag[g]}</b>.`;
   const part = nextPart(me);
   const rows = [];
   if (part) rows.push({ cls: "next", key: "part", name: `Boat part ${me.parts + 1} of ${PARTS.length}: ${part.name}`, what: "Fix all four and you can sail away", cost: part.cost });
@@ -1352,7 +1441,25 @@ const MAP_PINS = () => [
   { x: WRECK.x + 2, z: WRECK.z - 6, html: "Shipyard" },
   { x: SQUARE.x, z: SQUARE.z, html: "Market Square" },
 ];
+function renderBoard() {
+  const h = S.town.history;
+  const now = h[h.length - 1].accept;
+  const was = h[Math.max(0, h.length - 1 - TOWN_DAYS_PER_NIGHT)].accept;
+  const top = now.indexOf(Math.max(...now));
+  const rows = now
+    .map((a, g) => [a, g])
+    .sort((x, y) => y[0] - x[0])
+    .map(([a, g]) => {
+      const d = Math.round((a - was[g]) / 10);
+      const arrow = d > 2 ? `<span class="b-up">+${d}</span>` : d < -2 ? `<span class="b-down">${d}</span>` : "";
+      return `<div class="b-row ${g === top ? "top" : ""}">${pic(g, "")}<div class="b-bar"><i style="width:${a / 10}%"></i></div>${arrow || `<span class="dim">${Math.round(a / 10)}</span>`}</div>`;
+    })
+    .join("");
+  $("board").innerHTML = `<h3>Who would take it</h3>${rows}<p>Percent of villagers who would accept each good from a stranger, and how much that moved since yesterday. Watch what is rising.</p>`;
+}
+
 function renderMap() {
+  renderBoard();
   const area = $("map-area");
   if (!area.querySelector("canvas")) {
     const c = document.createElement("canvas");
@@ -1406,6 +1513,15 @@ function drawMini(t) {
     g.beginPath();
     g.arc(o.x * k, o.z * k, 3, 0, 7);
     g.fill();
+  }
+  if (!S.rivalDone) {
+    g.fillStyle = "#c86bf0";
+    g.strokeStyle = "#fff";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(S.mira.x * k, S.mira.z * k, 5, 0, 7);
+    g.fill();
+    g.stroke();
   }
   const hotAt = WORLD.objects.find((o) => o.kind === "dock" && o.i === hotDock());
   if (hotAt) {
@@ -1646,7 +1762,7 @@ function endFight(won) {
   }
   const score = Math.round(f.castQ * 30 + f.strikeQ * 30 + (1 - f.peak) * 40);
   const hot = f.o.i === hotDock();
-  const got = catchFish(me, score + 15 + (hot ? 25 : 0));
+  const got = catchFish(me, score + 15 + (hot ? 25 : 0), raining() ? 1 : 0);
   S.ver++;
   f.stage = "card";
   f.t = 0;
@@ -1935,8 +2051,9 @@ function applyNight() {
   const { town, me, rival } = S;
   const before = money();
   const shopWas = shop();
+  S.miraT = dayLength() * 0.2;
+  S.spendWas = me.bag[shopWas];
   const worthWas = worthNow(town, me);
-  if (!boatDone(rival)) playDay(town, rival, { casts: 3, score: 55, swaps: 4 });
   const r = nightFall(town, me, [rival]);
   S.ver++;
   const lost = r.lost.reduce((a, b) => a + b, 0);
@@ -1947,7 +2064,8 @@ function applyNight() {
   const m = money();
   const g = shop();
   S.log.push({ money: m, worth: worthNow(town, me) });
-  if (lost) S.banners.push({ title: `${r.lost.map((u, k) => (u ? `-${u} ${pic(k)}` : "")).join(" ")} rotted overnight`, text: "", cls: "bad" });
+  if (lost >= 3) S.banners.push({ title: `${r.lost.map((u, k) => (u ? `-${u} ${pic(k)}` : "")).join(" ")} rotted overnight`, text: "", cls: "bad" });
+  else if (lost) popAt(S.you.x, S.you.y + 2.6, S.you.z, `${r.lost.map((u, k) => (u ? `-${u} ${pic(k)}` : "")).join(" ")}`, "bad");
   if (m !== before && m >= 0) {
     S.moneyBorn++;
     V.forEach((p) => (p.hop = 1));
@@ -1955,7 +2073,20 @@ function applyNight() {
     const steps = fishToGood(m);
     S.banners.push({ title: `${pic(m)} ${cap(GOODS[m])} is money now`, text: before >= 0 ? `It replaced ${GOODS[before]}. Nobody decided it.` : `Nobody decided it. On day 1 a fish took ${S.firstChain} swaps to become ${GOODS[m]}. Now it takes ${Math.max(1, steps)}.`, cls: "gold", sound: "money" });
   } else if (m < 0 && before >= 0) S.banners.push({ title: `${cap(GOODS[before])} stopped being money`, text: "The town is bartering again. What will it trust next?", cls: "bad" });
-  if (g !== shopWas) S.banners.push({ title: `The shipwright now takes ${pic(g)} ${GOODS[g]}`, text: `Your ${GOODS[shopWas]} no longer buys boat parts.`, cls: "bad", sound: "deny" });
+  if (g !== shopWas) {
+    const had = S.spendWas, item = nextPart(me);
+    const left = me.bag[shopWas], now = me.bag[g];
+    S.crash = { good: shopWas, had, left, now, day: dayNum() };
+    S.banners.unshift({
+      title: `${had ? `Your ${had} ${pic(shopWas)} just stopped being money` : `The shipwright now takes ${pic(g)} ${GOODS[g]}`}`,
+      text: had ? `Yesterday that was ${item ? `${Math.min(100, Math.round((had / item.cost) * 100))}% of the ${item.name.toLowerCase()}` : "worth something"}. Today the shipyard wants ${GOODS[g]}, and you can spend ${now}.` : `Anyone still holding ${GOODS[shopWas]} just lost their buyer.`,
+      cls: "bad",
+      sound: "thunder",
+    });
+    if (had) S.pain = 1;
+    S.rivalHit = rival.bag[shopWas];
+    if (S.rivalHit > 0) S.banners.push({ title: `Mira is stuck with ${S.rivalHit} ${pic(shopWas)} too`, text: "Same storm, same rules. Nobody prints a way out.", cls: "" });
+  }
   const ev = rainEvent();
   if (ev && !S.told && rainGood() >= 0 && town.day >= (ev.decideDay ?? 8) && town.day < ev.day) {
     S.told = true;
@@ -1967,8 +2098,6 @@ function applyNight() {
   }
   if (boatDone(rival) && !S.rivalDone) {
     S.rivalDone = dayNum() - 1;
-    S.banners.push({ title: "Mira sailed away", text: "Her boat is gone. Yours is still on the sand.", cls: "bad" });
-    miraBoat.root.visible = false;
   }
   for (const [m2, on] of miraBoat.parts.map((p, i) => [p, i < rival.parts])) m2.visible = on;
   miraBoat.wreck.visible = rival.parts === 0;
@@ -2084,8 +2213,8 @@ function finish(won) {
   const drop = drawChart();
   $("end-sub").textContent = won
     ? drop >= 25
-      ? `Your wealth fell ${drop}% at its worst, and you still got out. Diamond Lock holders fell 99.8%.`
-      : `Your wealth never fell more than ${drop}%. You moved before the money did. Diamond Lock holders fell 99.8%.`
+      ? `Your wealth fell ${drop}% at its worst, and you still got out. Diamond Lock holders fell 99.7%.`
+      : `Your wealth never fell more than ${drop}%. You moved before the money did. Diamond Lock holders fell 99.7%.`
     : drop >= 25
       ? `Your wealth fell ${drop}% when the money moved. That is what holding the wrong thing feels like.`
       : "The money moved, and the boat stayed on the sand. Try spending before the storm.";
@@ -2138,6 +2267,7 @@ function renderBag() {
   $("bag").innerHTML = me.bag
     .map((u, k) => `<div class="slot ${u ? "" : "none"} ${k === g ? "money" : ""}" data-g="${k}" title="${cap(GOODS[k])}: loses ${town.spoil[k]}% a day">${k === g ? '<span class="tagm">shipyard takes</span>' : ""}${pic(k, "")}<span class="count">${u}</span></div>`)
     .join("");
+  drawPurse();
 }
 function drawKeys() {
   const you = S.you;
@@ -2153,6 +2283,26 @@ function drawKeys() {
     `${S.me.gear.duck ? `<kbd>R</kbd> ${you.riding ? "get off <kbd>Q</kbd> honk" : "ride duck"} ` : ""}<kbd>M</kbd> map <kbd>Ctrl</kbd> + scroll zoom`,
   ].filter(Boolean).join("<br>");
 }
+function drawPurse() {
+  const { me, town } = S;
+  const g = shop();
+  const spend = me.bag[g];
+  const worth = worthNow(town, me);
+  const line = [...S.log.map((l) => l.worth), worth];
+  const max = Math.max(...line, 1);
+  const pts = line.map((v, i) => `${((i / Math.max(1, DAYS)) * 92 + 2).toFixed(1)},${(25 - (v / max) * 22).toFixed(1)}`).join(" ");
+  const fell = line.length > 1 && worth < Math.max(...line) * 0.7;
+  $("purse").innerHTML = `<span class="spend ${spend ? "" : "none"}"><small>you can spend</small><b>${spend}</b>${pic(g)}</span><svg viewBox="0 0 96 28" class="spark ${fell ? "down" : ""}" aria-label="Your wealth so far"><polyline points="${pts}"/></svg>`;
+  if (S.pain) {
+    S.pain = 0;
+    const el = $("purse");
+    el.classList.remove("hit");
+    void el.offsetWidth;
+    el.classList.add("hit");
+    cam.shake = 0.5;
+  }
+}
+
 function renderHud() {
   const { me, town, rival } = S;
   $("day-n").textContent = `Day ${Math.min(DAYS, dayNum())}`;

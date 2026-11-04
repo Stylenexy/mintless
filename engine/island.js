@@ -46,11 +46,18 @@ export function fishYield(score, gear = {}) {
   return base && gear.rod ? base + 1 : base;
 }
 
-export function catchFish(v, score) {
-  const got = fishYield(score, v.gear);
+export function catchFish(v, score, bonus = 0) {
+  const base = fishYield(score, v.gear);
+  const got = base ? base + bonus : 0;
   v.bag[v.makes] += got;
   v.caught += got;
   return got;
+}
+
+// Every good this trader would take from your bag right now.
+export function givesFor(town, v, index) {
+  const agent = town.agents[index];
+  return v.bag.map((u, g) => (u > 0 && answer(town, agent, g).yes ? g : -1)).filter((g) => g >= 0);
 }
 
 // The good the shipwright takes today: whichever the town accepts most.

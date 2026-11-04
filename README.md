@@ -33,7 +33,7 @@ Expected output (abridged):
 ✔ if every good spoils alike, the town still picks a money, and history decides which
 ✔ pure barter feeds nobody; money feeds the town
   first money by good: 160 / 120 / 140 / 180 / 160; slowest-spoiling good won 50%
-ℹ pass 17  ℹ fail 0
+ℹ pass 41  ℹ fail 0
   salt became money in 500/500 towns, median day 3, latest day 11
   after the rain, cloth replaced it in 500/500 towns, median 3 days, slowest 6
 PASS | access keys on the contract account: 0
@@ -80,11 +80,11 @@ Nothing in the engine mentions any good by name (a test checks this). "Money" is
 
 ### Salt Town and mystery towns
 
-Salt Town is the tutorial and the proof: its rules are fixed, so the claims above can be checked exactly. The game you play by default is a **mystery town**: same traders, same decision rule, but the spoil rates come from one row of a public table in `rules/town.js` (38 shuffles of 1, 2, 3, 8 and 20 percent a day, all checked to be playable by `scripts/mystery-table.js`), and the rains on day 16 soak whatever good most traders hold on day 8. Who makes what and who needs what matters as much as how fast a good spoils, so the winner cannot be read off the rulebook. On day 3 the price leader already points at the eventual money in about 96% of towns: the skill is reading the market early.
+Salt Town is the tutorial and the proof: its rules are fixed, so the claims above can be checked exactly. The first island you play is Salt Town. Every island after it is a **mystery town**: same traders, same decision rule, but the spoil rates come from one row of a public table in `rules/town.js` (38 shuffles of 1, 2, 3, 8 and 20 percent a day, all checked to be playable by `scripts/mystery-table.js`), and the rains on day 16 soak whatever good most traders hold on day 8. Who makes what and who needs what matters as much as how fast a good spoils, so the winner cannot be read off the rulebook. On day 3 the price leader already points at the eventual money in about 96% of towns: the skill is reading the market early.
 
 ## The game loop
 
-Five rounds of playtesting shaped this. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
+Five rounds of testing by one player, the builder, shaped this. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
 
 **Goal: fix four boat parts before the tenth night.** Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
 
@@ -172,7 +172,7 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 - Engine, tests and scripts: plain JavaScript on Node.js built-ins, no npm dependencies. 3D rendering: Three.js r160, vendored in `web/vendor/`.
 - Contract: Rust with `near-sdk` 5.30.0. Deploy tool only: `near-api-js` 7.4.0.
 - Fonts: Lilita One and Baloo 2 (game); Fraunces, Nunito, JetBrains Mono (lab page), all from Google Fonts. All terrain, characters, goods, music and sound are made in code; there are no image, model or audio files.
-- AI: code and documentation were written with an AI coding assistant (Claude Code), listed here as the hackathon rules ask. Every claim in this README is checked by the commands above.
+- AI: code and documentation were written with an AI coding assistant (Claude Code), listed here as the hackathon rules ask. The engine and chain claims in this README are checked by the commands above; the Growtopia prices come from the sources listed.
 
 ## Team
 
