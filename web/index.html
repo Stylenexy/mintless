@@ -41,6 +41,7 @@
         <button class="mapwrap" id="map-open" aria-label="Open the island map (M)"><canvas id="mini" width="184" height="184"></canvas><span class="m-key">M</span></button>
         <div class="corner-btns">
           <button id="sound" class="mini" aria-label="Sound">Sound on</button>
+          <button id="book-open" class="mini" aria-label="Fish book">Fish</button>
           <button id="help" class="mini" aria-label="How to play">Help</button>
         </div>
       </div>
@@ -89,7 +90,7 @@
 
   <div id="yard" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="yard-title">
     <div class="sheet glass">
-      <h2 id="yard-title">The shipyard</h2>
+      <div class="who"><img id="yard-face" alt="The shipwright"><h2 id="yard-title">The shipyard</h2></div>
       <p class="sheet-sub" id="yard-take"></p>
       <div id="yard-items"></div>
       <div class="row"><button class="btn" data-close>Leave</button></div>
@@ -104,6 +105,15 @@
         <div class="board" id="board"></div>
       </div>
       <p class="sheet-sub">Each village makes one good and wants another. That ring is why barter hurts, and why the island needs money.</p>
+      <div class="row"><button class="btn" data-close>Close</button></div>
+    </div>
+  </div>
+
+  <div id="book" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="book-title">
+    <div class="sheet glass wide">
+      <h2 id="book-title">Fish book</h2>
+      <p class="sheet-sub" id="book-sub"></p>
+      <div class="fishes" id="fishes"></div>
       <div class="row"><button class="btn" data-close>Close</button></div>
     </div>
   </div>
@@ -136,6 +146,7 @@
         <div class="legend"><span><i style="background:#00bfff"></i>your wealth, day 1 to 10</span><span><i style="background:#ff6b6b"></i>Growtopia Diamond Lock price, 2015 to 2026</span></div>
       </div>
       <p id="end-story" class="story"></p>
+      <p id="end-chain" class="chain hidden"></p>
       <div class="row">
         <button id="again" class="btn primary">Next island</button>
         <button id="replay" class="btn">Same island</button>

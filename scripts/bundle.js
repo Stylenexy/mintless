@@ -10,7 +10,7 @@ const strip = (src) =>
     .replace(/^import[\s\S]*?from\s+["'][^"']+["'];\s*$/gm, "")
     .replace(/^export\s+(const|function|async function)/gm, "$1");
 const ENGINE = ["engine/rng.js", "rules/town.js", "engine/town.js", "engine/player.js", "engine/mystery.js"];
-const GAME = ["engine/visitor.js", "engine/island.js", "web/kit.js", "web/island3d.js", "web/people.js", "web/audio.js", "web/game.js"];
+const GAME = ["engine/visitor.js", "engine/island.js", "web/kit.js", "web/island3d.js", "web/people.js", "web/art.js", "web/audio.js", "web/game.js"];
 const chain = read("web/chain.json");
 
 // Three.js as a plain object, so the page needs no import map or data URL.

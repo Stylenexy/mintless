@@ -171,8 +171,8 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 
 - Engine, tests and scripts: plain JavaScript on Node.js built-ins, no npm dependencies. 3D rendering: Three.js r160, vendored in `web/vendor/`.
 - Contract: Rust with `near-sdk` 5.30.0. Deploy tool only: `near-api-js` 7.4.0.
-- Fonts: Lilita One and Baloo 2 (game); Fraunces, Nunito, JetBrains Mono (lab page), all from Google Fonts. All terrain, characters, goods, music and sound are made in code; there are no image, model or audio files.
-- AI: code and documentation were written with an AI coding assistant (Claude Code), listed here as the hackathon rules ask. The engine and chain claims in this README are checked by the commands above; the Growtopia prices come from the sources listed.
+- Fonts: Lilita One and Baloo 2 (game); Fraunces, Nunito, JetBrains Mono (lab page), all from Google Fonts. All terrain, 3D characters, goods, music and sound are made in code. The fish cards and two portraits in `web/art.js` were made with an image generator (OpenAI Codex image tool) from our own prompts.
+- AI: code and documentation were written with AI coding assistants (Claude Code; OpenCode drafted `web/audio.js`), listed here as the hackathon rules ask. The engine and chain claims in this README are checked by the commands above; the Growtopia prices come from the sources listed.
 
 ## Team
 

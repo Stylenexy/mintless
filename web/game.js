@@ -11,6 +11,7 @@ import { createRun, catchFish, shopGood, buyPart, buyGear, bestGive, givesFor, r
 import { U, toon, ink, inked, hex, noise2, brush, sstep } from "./kit.js";
 import { SIZE, VILLAGES, SQUARE, CAMP, WRECK, DOCKS, NODES, EDGES, buildIsland, heightAt, groundAt, hitSolid, makeSky, makeClouds, makeRain } from "./island3d.js";
 import { makeCrowd, makeHero, makeDuck, makeKeeper, makeBoat, goodGeo, fishGeo } from "./people.js";
+import { ART } from "./art.js";
 import { unlockAudio, sfx, babble, ambience, music, musicMood, setMuted, isMuted } from "./audio.js";
 
 const GOODS = ["salt", "fish", "rice", "cloth", "wood"];
@@ -35,6 +36,8 @@ const SOAKED = ["Everybody stay calm and swap!", "Look at the sky. Look at my st
 // Lowest seller price of a Growtopia Diamond Lock in rupiah, 2015 to Jun 2026 (riset-track/growtopia-angka.md).
 const DL_PRICES = [185000, 100000, 45000, 35000, 26000, 15800, 10000, 8000, 4000, 3700, 3300, 501, 299];
 
+// The town's rules also live in a NEAR testnet contract with no keys left on it.
+const CHAIN = { rpc: "https://rpc.testnet.near.org", contract: "mintless-mvznw81o.testnet" };
 const DAY_SECONDS = 80;
 const FIRST_DAY_SECONDS = 150;
 const WALK = 7.5, RUN = 11.5, SPRINT = 14, DUCK = 18;
@@ -418,7 +421,7 @@ function updateMira(dt) {
     m.tz = MIRA.z;
   }
   if (r.parts > parts) {
-    toast(`Mira fixed her ${PARTS[r.parts - 1].name.toLowerCase()}: ${r.parts} of ${PARTS.length}.`);
+    miraSays(["Hull done. Keep up.", "Mast is up. Tick tock.", "Sail's on. Pack your things.", "That's the rudder. Bye!"][r.parts - 1]);
     miraBoat.wreck.visible = false;
     miraBoat.parts.forEach((p, i) => (p.visible = i < r.parts));
     S.routeT = 0;
@@ -1096,7 +1099,7 @@ function use() {
   else if (n.kind === "bed") beginNight();
   else if (n.kind === "dock") startFishing(n.o);
   else if (n.kind === "bottle") readBottle(n.o);
-  else if (n.kind === "mira") toast(`Mira: ${["Don't look at me, my boat is sand too.", "Hull's done. Yours?", "Mast is up. Tick tock.", "One more part. Enjoy the island.", "Bye!"][S.rival.parts]}`);
+  else if (n.kind === "mira") miraSays(["Don't look at me, my boat is sand too.", "Hull's done. Yours?", "Mast is up. Tick tock.", "One more part. Enjoy the island.", "Bye!"][S.rival.parts]);
 }
 
 // A note in a bottle tells you where the town is heading, if you bother to swim for it.
@@ -1355,7 +1358,7 @@ function renderBubbles() {
 
 // ------------------------------------------------------------ panels
 function hideAllPanels() {
-  for (const id of ["yard", "map", "end", "helpbox"]) $(id).classList.add("hidden");
+  for (const id of ["yard", "map", "end", "helpbox", "book"]) $(id).classList.add("hidden");
   $("night").classList.add("hidden");
   $("fishing").classList.add("hidden");
   $("card").classList.add("hidden");
@@ -1368,6 +1371,7 @@ function openPanel(name) {
   $(name).classList.remove("hidden");
   if (name === "yard") renderYard();
   if (name === "map") renderMap();
+  if (name === "book") renderBook();
   sfx("open");
 }
 function closePanel() {
@@ -1780,13 +1784,41 @@ function endFight(won) {
   const stars = "★".repeat(k.rank + 1) + '<span style="opacity:.25">' + "★".repeat(4 - k.rank) + "</span>";
   const card = $("card");
   const next = S.firstFish ? `<p style="font-weight:800;color:#0a7fb8">${touchDevice ? "Tap Stop fishing" : "Press Q"}, then follow the gold trail to swap it.</p>` : `<p style="font-size:14px;color:#46507a">${Object.keys(S.book).length} of ${FISH.length} in your fish book</p>`;
-  card.innerHTML = `${isNew ? '<span class="new">NEW</span>' : ""}<h3>${k.name}</h3><div class="stars">${stars}</div><p>${cm} cm. ${k.line}</p><p class="plus">+${got} ${pic(1)} ${score >= 70 ? "Clean catch!" : ""}</p>${next}`;
+  card.innerHTML = `<img class="art" src="${fishArt(k.name)}" alt="">${isNew ? '<span class="new">NEW</span>' : ""}<h3>${k.name}</h3><div class="stars">${stars}</div><p>${cm} cm. ${k.line}</p><p class="plus">+${got} ${pic(1)} ${score >= 70 ? "Clean catch!" : ""}</p>${next}`;
   card.classList.remove("hidden");
   renderBag();
   bump(1);
   rebuildStack();
   renderFish();
   if (S.firstFish) S.firstFish = false;
+}
+
+const fishArt = (name) => ART[name.toLowerCase().replace(/ /g, "-")];
+
+function renderBook() {
+  const seen = Object.keys(S.book).length;
+  $("book-sub").textContent = `${seen} of ${FISH.length} caught. The book stays with you from island to island.`;
+  $("fishes").innerHTML = FISH.map((f) => {
+    const cm = S.book[f.name];
+    return `<div class="${cm ? "" : "no"}"><img src="${fishArt(f.name)}" alt="">${cm ? `${f.name}<br>${cm} cm` : "???"}</div>`;
+  }).join("");
+}
+$("book-open").addEventListener("click", () => S && !S.fish && !S.night && openPanel("book"));
+
+// Mira talks from the corner of your eye, with a face.
+let miraTimer = null;
+function miraSays(text) {
+  let el = $("mira-say");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "mira-say";
+    el.className = "mira-say";
+    $("hud").appendChild(el);
+  }
+  el.innerHTML = `<img src="${ART.mira}" alt="Mira"><span>${text}</span>`;
+  el.classList.remove("hidden");
+  clearTimeout(miraTimer);
+  miraTimer = setTimeout(() => el.classList.add("hidden"), 4200);
 }
 
 const hotDock = () => (S.seed + dayNum() * 2) % DOCKS.length;
@@ -2085,7 +2117,7 @@ function applyNight() {
     });
     if (had) S.pain = 1;
     S.rivalHit = rival.bag[shopWas];
-    if (S.rivalHit > 0) S.banners.push({ title: `Mira is stuck with ${S.rivalHit} ${pic(shopWas)} too`, text: "Same storm, same rules. Nobody prints a way out.", cls: "" });
+    if (S.rivalHit > 0) setTimeout(() => S && miraSays(`${S.rivalHit} ${GOODS[shopWas]}, gone. Same storm for both of us.`), 7000);
   }
   const ev = rainEvent();
   if (ev && !S.told && rainGood() >= 0 && town.day >= (ev.decideDay ?? 8) && town.day < ev.day) {
@@ -2231,6 +2263,26 @@ function finish(won) {
   $("end-story").textContent = `${story.join(" ")} Nobody decided any of it, and nobody could print a single unit. You caught ${me.caught} fish and made ${S.swaps} swaps.`;
   $("end").classList.remove("hidden");
   $("play-next").classList.remove("hidden");
+  chainProof();
+}
+
+// Read-only, no wallet: ask the chain itself whether anyone can still change the rules.
+async function chainProof() {
+  const el = $("end-chain");
+  try {
+    const res = await fetch(CHAIN.rpc, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { finality: "final", request_type: "view_access_key_list", account_id: CHAIN.contract } }),
+    });
+    const body = await res.json();
+    const keys = body.result?.keys;
+    if (!Array.isArray(keys)) return;
+    el.innerHTML = `Live from NEAR testnet: <b>${keys.length} keys</b> on ${CHAIN.contract}. The town's rules are on chain, and nobody can change them or print a unit.`;
+    el.classList.remove("hidden");
+  } catch {
+    // offline or blocked: the end screen simply goes without the proof
+  }
 }
 
 // ------------------------------------------------------------ sound toggle
@@ -2389,6 +2441,7 @@ function boot() {
 
   GOOD_GEO = GOODS.map((_, g) => goodGeo(g));
   ICONS = GOOD_GEO.map((g) => iconOf(g));
+  $("yard-face").src = ART.shipwright;
 
   crowd = makeCrowd(scene, SALT_TOWN.roles, tier > 0);
   const seen = {};
@@ -2545,6 +2598,40 @@ if (qs.has("debug")) {
       for (let i = 0; i < 40; i++) placeCamera(0.03);
       render(now / 1000, 0.016);
       return Math.round(performance.now() - t0);
+    },
+    // One clip frame: advance the game by hand and hand back the picture.
+    size(w, h) {
+      renderer.setPixelRatio(1);
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+    },
+    tick(ms) {
+      let now = (this.clockNow = (this.clockNow ?? performance.now()) + ms);
+      for (let t = 0; t < ms; t += 16) update(0.016, now - ms + t);
+      render(now / 1000, ms / 1000);
+      return canvas.toDataURL("image/jpeg", 0.88);
+    },
+    // Real cost of a frame at a given size: reading a pixel makes the GPU finish.
+    bench(w, h, n = 120) {
+      const gl = renderer.getContext();
+      const px = new Uint8Array(4);
+      renderer.setPixelRatio(1);
+      renderer.setSize(w, h, false);
+      const times = [];
+      let now = performance.now();
+      for (let i = 0; i < n; i++) {
+        const t0 = performance.now();
+        now += 16;
+        update(0.016, now);
+        render(now / 1000, 0.016);
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        times.push(performance.now() - t0);
+      }
+      times.sort((a, b) => a - b);
+      renderer.setPixelRatio(ratio);
+      resize();
+      const avg = times.reduce((a, b) => a + b, 0) / n;
+      return { w, h, avgMs: +avg.toFixed(1), p95Ms: +times[Math.floor(n * 0.95)].toFixed(1), fps: Math.round(1000 / avg), info: { ...renderer.info.render } };
     },
     // A hidden page does not present its canvas, so show the last frame as an image.
     snap() {

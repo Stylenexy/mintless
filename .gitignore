@@ -6,3 +6,4 @@ contract/target/
 dist/
 .dex/
 .claude/
+art-src/
