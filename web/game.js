@@ -2406,6 +2406,31 @@ function startRun(kind, again = null) {
   else say(null, "Your boat broke. Nobody here uses coins. Follow the gold trail.");
   renderHud();
 }
+// For a quick look or a live demo: day 6, savings in hand, sunset close.
+function jumpToStorm() {
+  startRun("salt");
+  const { town, me, rival } = S;
+  me.gear.duck = true;
+  for (let i = 0; i < 5; i++) {
+    playDay(town, rival, { casts: 3, score: 55, swaps: 4 });
+    nightFall(town, me, [rival]);
+    S.log.push({ money: money(), worth: worthNow(town, me) });
+  }
+  me.bag[shop()] = 7;
+  me.bag[1] = 3;
+  me.parts = 1;
+  boat.parts[0].visible = true;
+  boat.wreck.visible = false;
+  S.told = true;
+  S.firstFish = false;
+  S.tips.walk = true;
+  S.clock = 0.62;
+  S.ver++;
+  rebuildStack();
+  renderHud();
+  toast("Day 6. You saved 7 for the mast. The storm lands at sunset.");
+}
+$("play-storm").addEventListener("click", jumpToStorm);
 $("play").addEventListener("click", () => startRun("salt"));
 $("play-next").addEventListener("click", () => startRun("mystery"));
 $("again").addEventListener("click", () => startRun("mystery"));
@@ -2590,6 +2615,7 @@ if (qs.has("debug")) {
     tier: () => tier,
     gpu: () => glInfo,
     start: startRun,
+    jumpToStorm,
     trade,
     use,
     startFishing,

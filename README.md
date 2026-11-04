@@ -1,6 +1,6 @@
 # Mintless: the town that picks its own money
 
-A tiny market town on NEAR with no currency and no printer. 40 traders barter salt, fish, rice, cloth and wood. Nobody tells them what money is. Within a few days one good becomes the money on its own. Change one public rule, and the town switches to a different money. Nobody, including the developer, can create a single extra unit of anything.
+In 2016 one Growtopia Diamond Lock sold for Rp100,000. In 2026 it sells for Rp299: savings in a game currency, gone, because someone kept printing. Mintless is the opposite: an island on NEAR with no coins and no printer. 40 villagers barter salt, fish, rice, cloth and wood. Nobody tells them what money is. Within days one good becomes money on its own, and one storm can replace it. Nobody, including the developer, can create a single extra unit.
 
 You wash up on an island with no coins and a broken boat. Fish, swap goods with forty villagers, and pay the shipwright in whatever the town takes most, before the tenth night. A storm is coming, and the money can change under your feet. You feel what a Growtopia Diamond Lock holder felt, except here nobody printed anything: the town did it, and reading the town could have saved you.
 
@@ -43,7 +43,7 @@ PASS | rules hash on chain = sha256(rules/town.js)
 PASS | day 30: chain fingerprint 172d8ea0 = local engine replay; money = cloth
 ```
 
-To play: `npm start`, then open http://localhost:5173 (a season of 10 days takes about 15 minutes, on a laptop or a phone). No Node? `npm run bundle` writes `dist/mintless.html`, one file that opens in any browser. The dashboard with the rules, the what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
+To play: `npm start`, then open http://localhost:5173 (a season of 10 days takes about 15 minutes, on a laptop or a phone). In a hurry? *Jump to the storm* on the title screen puts you on day 6 with savings in hand, about 30 seconds before they stop being money. No Node? `npm run bundle` writes `dist/mintless.html`, one file that opens in any browser. The dashboard with the rules, the what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
 
 ## Why this exists
 
