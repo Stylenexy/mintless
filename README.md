@@ -122,7 +122,7 @@ The next deploy moves the game's core rule into the contract. `build(part, town_
 
 The browser side is in `web/chain-play.js`: a guest account made by the testnet helper, a key in localStorage, each boat part signed with the browser's own WebCrypto, no wallet and no popup, and a receipt per part on the end screen. Payments never block the game.
 
-What has been proved so far: the signer matches `near-api-js` byte for byte (`test/chain-play.test.js`), and the live testnet RPC parsed a transaction from it and answered `SignerDoesNotExist`, as it should for an account that does not exist. The compiled contract passes `npm run check:wasm` (14 checks in a stand-in NEAR host, including refusing salt on day 7). What has not: no guest has paid on testnet yet, because the testnet account helper is rate limiting this machine (HTTP 429). Until the redeploy the game stays local, and when the helper says no it says so on the end screen.
+What has been proved so far: the signer matches `near-api-js` byte for byte (`test/chain-play.test.js`), and the live testnet RPC parsed a transaction from it and answered `SignerDoesNotExist`, as it should for an account that does not exist. The compiled contract passes `npm run check:wasm` (15 checks in a stand-in NEAR host, including refusing salt on day 7). What has not: no guest has paid on testnet yet, because the testnet account helper is rate limiting this machine (HTTP 429). Until the redeploy the game stays local, and when the helper says no it says so on the end screen.
 
 Not implemented on purpose: NEP-245 approvals and `*_transfer_call`. Transfers go only to accounts that joined (keeps storage bounded; the contract pays storage).
 
