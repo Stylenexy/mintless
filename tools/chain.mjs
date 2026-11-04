@@ -11,7 +11,7 @@ import { SALT_TOWN } from "../rules/town.js";
 import { createTown, run, stateHash } from "../engine/town.js";
 import { prices } from "../engine/player.js";
 
-const RPC = process.env.NEAR_RPC ?? "https://rpc.testnet.near.org";
+const RPC = process.env.NEAR_RPC ?? "https://test.rpc.fastnear.com";
 const HELPER = "https://helper.nearprotocol.com/account";
 const WASM = new URL("../contract/target/wasm32-unknown-unknown/release/mintless_town.wasm", import.meta.url);
 const provider = new JsonRpcProvider({ url: RPC });
@@ -65,7 +65,8 @@ if (process.argv[2] === "--lock") {
 
 const keep = process.argv.includes("--keep");
 const rulesJson = JSON.stringify(SALT_TOWN);
-const SEED = 1;
+const SEED = 7; // the first island in the browser game
+const STARTER = Array(5).fill("32"); // enough of any one good for a whole boat
 
 console.log(`== Mintless on NEAR testnet (${new Date().toISOString()}) ==`);
 const town = await throwaway("mintless");
@@ -77,7 +78,7 @@ await C.deployContract(fs.readFileSync(WASM));
 await C.callFunction({
   contractId: C.accountId,
   methodName: "new",
-  args: { rules_json: rulesJson, seed: SEED, day_seconds: "0", max_days: 60, stall: Array(5).fill("100000"), starter: ["0", "10", "10", "0", "10"], bags: 200 },
+  args: { rules_json: rulesJson, seed: SEED, day_seconds: "0", max_days: 30, stall: Array(5).fill("100000"), starter: STARTER, bags: 200 },
   gas: GAS,
 });
 const t0 = await view(C.accountId, "town");
@@ -87,7 +88,7 @@ const supply0 = await view(C.accountId, "mt_batch_supply", { token_ids: SALT_TOW
 
 await dex.account.callFunction({ contractId: C.accountId, methodName: "join", args: {}, gas: GAS });
 const bag = await view(C.accountId, "bag_of", { account_id: dex.account.accountId });
-say(bag.units.join(",") === "0,10,10,0,10", "C02 player joined, starter bag from the chest", `bag=${bag.units.join(",")}`);
+say(bag.units.join(",") === STARTER.join(","), "C02 player joined, starter bag from the chest", `bag=${bag.units.join(",")}`);
 
 const got = await dex.account.callFunction({ contractId: C.accountId, methodName: "swap", args: { give: "fish", amount: "10", get: "salt" }, gas: GAS });
 say(Number(got) > 0, "C03 swap 10 fish -> salt at town prices", `got ${got} salt`);
@@ -116,6 +117,15 @@ const down = supply1.every((s, g) => BigInt(s) <= BigInt(supply0[g]));
 const anyDown = supply1.some((s, g) => BigInt(s) < BigInt(supply0[g]));
 say(down && anyDown, "C09 supply only went down (rot burned), never up", `${supply0.join(",")} -> ${supply1.join(",")}`);
 
+const t1 = Date.now();
+const before = await view(C.accountId, "mt_supply", { token_id: "cloth" });
+const hull = await dex.account.callFunctionRaw({ contractId: C.accountId, methodName: "build", args: { part: 0, town_day: 18, good: "cloth" }, gas: GAS, waitUntil: "EXECUTED_OPTIMISTIC" });
+const buildGas = hull.receipts_outcome.reduce((s, r) => s + Number(r.outcome.gas_burnt), 0);
+const after = await view(C.accountId, "mt_supply", { token_id: "cloth" });
+say(BigInt(before) - BigInt(after) === 4n, "C10 the hull is paid in cloth on day 7 and burned", `${(Date.now() - t1) / 1000} s, ${(buildGas / 1e12).toFixed(1)} TGas`);
+const refused = await dex.account.callFunctionRaw({ contractId: C.accountId, methodName: "build", args: { part: 1, town_day: 18, good: "salt" }, gas: GAS, waitUntil: "EXECUTED_OPTIMISTIC" }).then((o) => "Failure" in o.status, () => true);
+say(refused, "C11 the shipwright refuses salt on day 7");
+
 const keys = await provider.viewAccessKeyList({ accountId: C.accountId });
 console.log(`\ncontract: ${C.accountId}  keys left: ${keys.keys.length}`);
 if (keep) {
@@ -127,5 +137,5 @@ if (keep) {
 console.log(`RINGKASAN: ${lines.length - failures} PASS, ${failures} FAIL`);
 
 fs.writeFileSync(new URL("./chain-report.txt", import.meta.url), `testnet ${new Date().toISOString()}\n${lines.join("\n")}\n\ncontract ${C.accountId}\n`);
-fs.writeFileSync(new URL("../web/chain.json", import.meta.url), JSON.stringify({ network: "testnet", rpc: RPC, contract: C.accountId, seed: SEED, deployed: new Date().toISOString() }, null, 2) + "\n");
+fs.writeFileSync(new URL("../web/chain.json", import.meta.url), JSON.stringify({ network: "testnet", rpc: RPC, helper: HELPER, contract: C.accountId, seed: SEED, play: failures === 0, deployed: new Date().toISOString() }, null, 2) + "\n");
 process.exit(failures ? 1 : 0);

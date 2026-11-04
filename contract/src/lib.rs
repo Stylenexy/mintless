@@ -6,6 +6,8 @@
 //!   the town; nobody can change its rules (see `rules()` and `rules_hash`).
 //! * There is no owner, no admin method and no upgrade method. After deploy
 //!   the account's last access key is deleted (see ../tools/chain.mjs).
+//! * The shipwright (`build`) recomputes the town from its seed, so what counts
+//!   as money on a given day is decided here, not by the browser.
 //!
 //! Items follow NEP-245 (multi token) for transfers, balances, supply and
 //! events. Not implemented on purpose: approvals and `*_transfer_call`.
@@ -22,11 +24,18 @@ use near_sdk::{env, near, require, AccountId, BorshStorageKey, NearToken, PanicO
 pub const SWAP_FEE: u64 = 5;
 /// Most days one `tick` call may advance (keeps gas bounded).
 pub const MAX_TICK_DAYS: u32 = 10;
+/// What each boat part costs, in units of the town's money that day.
+pub const PART_COST: [u64; 4] = [4, 6, 8, 10];
+/// The town trades three of its days each night of a season.
+pub const TOWN_DAYS_PER_NIGHT: u32 = 3;
+/// A season is ten days, so the last morning is town day 27.
+pub const LAST_TOWN_DAY: u32 = 27;
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
 enum StorageKey {
     Bags,
+    Boats,
 }
 
 #[near(serializers = [borsh, json])]
@@ -36,6 +45,15 @@ pub struct Bag {
     pub carry: Vec<u32>,
     /// Town day up to which spoilage has been applied.
     pub day: u32,
+}
+
+/// A player's boat. `paid` is units per good burned at the shipyard.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct Boat {
+    pub parts: u8,
+    pub town_day: u32,
+    pub paid: Vec<u64>,
 }
 
 #[near(serializers = [json])]
@@ -80,6 +98,7 @@ pub struct Contract {
     stall: Vec<u64>,
     supply: Vec<u128>,
     bags: LookupMap<AccountId, Bag>,
+    boats: LookupMap<AccountId, Boat>,
 }
 
 fn emit(event: &str, data: near_sdk::serde_json::Value) {
@@ -125,6 +144,7 @@ impl Contract {
             stall,
             supply,
             bags: LookupMap::new(StorageKey::Bags),
+            boats: LookupMap::new(StorageKey::Boats),
         }
     }
 
@@ -232,6 +252,47 @@ impl Contract {
         U64(got)
     }
 
+    /// Pay the shipwright for boat part `part` on town day `town_day`, in the
+    /// good the town accepts most that day. The town is recomputed from its seed
+    /// and rules, so the browser cannot choose the day's money. Payment burns
+    /// goods from the caller's bag; part 0 starts a new boat.
+    pub fn build(&mut self, part: u8, town_day: u32, good: String) -> Boat {
+        let who = env::predecessor_account_id();
+        let cost = *PART_COST.get(part as usize).unwrap_or_else(|| env::panic_str("the boat has four parts"));
+        require!(town_day % TOWN_DAYS_PER_NIGHT == 0 && town_day <= LAST_TOWN_DAY, "not a morning of the season");
+        let goods = self.stall.len();
+        let mut boat = match self.boats.get(&who) {
+            Some(b) if part > 0 => b.clone(),
+            _ => Boat { parts: 0, town_day: 0, paid: vec![0; goods] },
+        };
+        require!(boat.parts == part, "build the parts in order");
+        require!(town_day >= boat.town_day, "that morning has passed");
+        let g = self.good(&good);
+        let takes = self.shop_good(town_day);
+        require!(g == takes, format!("the shipwright takes {} that day", self.town.rules.goods[takes].key));
+        let mut bag = self.settled(&who);
+        require!(bag.units[g] >= cost, "not enough in your bag");
+        bag.units[g] -= cost;
+        self.supply[g] -= cost as u128;
+        self.bags.insert(who.clone(), bag);
+        boat.parts += 1;
+        boat.town_day = town_day;
+        boat.paid[g] += cost;
+        self.boats.insert(who.clone(), boat.clone());
+        emit("mt_burn", json!({ "owner_id": who, "token_ids": [good], "amounts": [cost.to_string()], "memo": "paid the shipwright" }));
+        boat
+    }
+
+    /// Which good the shipwright takes on `town_day`, from the seed and rules alone.
+    pub fn shipyard(&self, town_day: u32) -> String {
+        require!(town_day <= LAST_TOWN_DAY, "not a day of the season");
+        self.town.rules.goods[self.shop_good(town_day)].key.clone()
+    }
+
+    pub fn boat_of(&self, account_id: AccountId) -> Option<Boat> {
+        self.boats.get(&account_id).cloned()
+    }
+
     /// Bring a bag's spoilage up to today (rot is burned). Anyone may call it.
     pub fn settle(&mut self, account_id: AccountId) -> Bag {
         let bag = self.settled(&account_id);
@@ -337,6 +398,17 @@ impl Contract {
         bag
     }
 
+    // The first good with the highest acceptance, same as shopGood() in engine/island.js.
+    fn shop_good(&self, town_day: u32) -> usize {
+        let mut town = Town::new(self.town.rules.clone(), self.seed);
+        for _ in 0..town_day {
+            town.step();
+        }
+        let accept = town.acceptance();
+        let top = *accept.iter().max().unwrap_or(&0);
+        accept.iter().position(|a| *a == top).unwrap_or(0)
+    }
+
     fn nonzero(&self, units: &[u64]) -> (Vec<String>, Vec<String>) {
         let mut ids = Vec::new();
         let mut amounts = Vec::new();
@@ -387,6 +459,76 @@ mod tests {
                 t
             })
             .collect()
+    }
+
+    // shopGood() of the JS engine, Salt Town seed 7, every morning of a season.
+    const SHOP_SEED_7: [&str; 10] = ["salt", "salt", "salt", "salt", "salt", "salt", "cloth", "cloth", "cloth", "cloth"];
+
+    #[test]
+    fn the_shipyard_matches_the_js_engine_every_morning() {
+        let c = town(1, 0);
+        for (i, want) in SHOP_SEED_7.iter().enumerate() {
+            assert_eq!(c.shipyard(i as u32 * TOWN_DAYS_PER_NIGHT), *want, "morning {}", i);
+        }
+    }
+
+    fn rich_town() -> Contract {
+        testing_env!(ctx("deployer.testnet").build());
+        let mut c = Contract::new(RULES.to_string(), 7, U64(0), 60, vec![U64(1000); 5], vec![U64(32); 5], 3);
+        testing_env!(ctx("ana.testnet").build());
+        c.join();
+        c
+    }
+
+    #[test]
+    fn paying_the_shipwright_burns_goods_and_builds_in_order() {
+        let mut c = rich_town();
+        let good = c.shipyard(9);
+        let g = GOODS.iter().position(|k| *k == good).unwrap();
+        let before = c.mt_supply(good.clone()).unwrap().0;
+        testing_env!(ctx("ana.testnet").build());
+        let boat = c.build(0, 9, good.clone());
+        assert_eq!((boat.parts, boat.town_day, boat.paid[g]), (1, 9, 4));
+        assert_eq!(c.mt_supply(good.clone()).unwrap().0, before - 4);
+        assert_eq!(c.bag_of("ana.testnet".parse().unwrap()).unwrap().units[g], 28);
+        let boat = c.build(1, 12, c.shipyard(12));
+        assert_eq!(boat.parts, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "the shipwright takes")]
+    fn the_shipwright_refuses_yesterdays_money() {
+        let mut c = rich_town();
+        let before = c.shipyard(12);
+        let after = c.shipyard(27);
+        assert_ne!(before, after);
+        testing_env!(ctx("ana.testnet").build());
+        c.build(0, 27, before);
+    }
+
+    #[test]
+    #[should_panic(expected = "build the parts in order")]
+    fn parts_go_in_order() {
+        let mut c = rich_town();
+        testing_env!(ctx("ana.testnet").build());
+        c.build(2, 12, c.shipyard(12));
+    }
+
+    #[test]
+    #[should_panic(expected = "that morning has passed")]
+    fn time_only_runs_forward() {
+        let mut c = rich_town();
+        testing_env!(ctx("ana.testnet").build());
+        c.build(0, 15, c.shipyard(15));
+        c.build(1, 12, c.shipyard(12));
+    }
+
+    #[test]
+    #[should_panic(expected = "not a morning of the season")]
+    fn only_mornings_count() {
+        let mut c = rich_town();
+        testing_env!(ctx("ana.testnet").build());
+        c.build(0, 10, "salt".into());
     }
 
     #[test]

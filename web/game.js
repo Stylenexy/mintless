@@ -7,6 +7,7 @@ import { createTown, step } from "../engine/town.js";
 import { SALT_TOWN } from "../rules/town.js";
 import { mysteryRules } from "../engine/mystery.js";
 import { answer, wantsOf, offer } from "../engine/visitor.js";
+import { createChainPlay } from "./chain-play.js";
 import { createRun, catchFish, shopGood, buyPart, buyGear, bestGive, givesFor, routeTo, worthNow, nightFall, nextPart, boatDone, bagCount, playDay, PARTS, GEAR, DAYS, TOWN_DAYS_PER_NIGHT } from "../engine/island.js";
 import { U, toon, ink, inked, hex, noise2, brush, sstep } from "./kit.js";
 import { SIZE, VILLAGES, SQUARE, CAMP, WRECK, DOCKS, NODES, EDGES, buildIsland, heightAt, groundAt, hitSolid, makeSky, makeClouds, makeRain } from "./island3d.js";
@@ -37,7 +38,16 @@ const SOAKED = ["Everybody stay calm and swap!", "Look at the sky. Look at my st
 const DL_PRICES = [185000, 100000, 45000, 35000, 26000, 15800, 10000, 8000, 4000, 3700, 3300, 501, 299];
 
 // The town's rules also live in a NEAR testnet contract with no keys left on it.
-const CHAIN = { rpc: "https://rpc.testnet.near.org", contract: "mintless-mvznw81o.testnet" };
+let CHAIN = { rpc: "https://test.rpc.fastnear.com", contract: "mintless-mvznw81o.testnet" };
+const loadChain = async () => {
+  CHAIN = await (await fetch("./chain.json", { cache: "no-store" })).json();
+};
+loadChain().catch(() => {
+  // keep the built-in address: the end screen only reads from it
+});
+let guest = null;
+// The first island. On this seed the storm moves the shipyard to cloth on the morning of day 7.
+const SALT_SEED = 7;
 const DAY_SECONDS = 80;
 const FIRST_DAY_SECONDS = 150;
 const WALK = 7.5, RUN = 11.5, SPRINT = 14, DUCK = 18;
@@ -1408,6 +1418,7 @@ function payNext() {
 function buyThing(key) {
   const { town, me } = S;
   const res = key === "part" ? buyPart(town, me) : buyGear(town, me, key);
+  if (key === "part" && res.ok) S.chain?.pay(me.parts - 1, town.day, S.rules.goods[res.good].key, res.part.name, res.cost);
   if (!res.ok) {
     sfx("deny");
     return;
@@ -2278,9 +2289,20 @@ function finish(won) {
   chainProof();
 }
 
+function receiptsHtml(chain) {
+  if (!chain) return "";
+  const { receipts, account, status, error } = chain.state;
+  if (status === "local") return `<br>This run stayed in your browser: ${error}.`;
+  if (!receipts.length) return "";
+  const rows = receipts.map((r) => (r.hash ? `<a href="https://testnet.nearblocks.io/txns/${r.hash}" target="_blank" rel="noopener">${r.label}: ${r.cost} ${r.good} ${r.ok ? "burned" : "refused"}</a> (${(r.ms / 1000).toFixed(1)} s)` : `${r.label}: not sent`));
+  return `<br>Paid by <b>${account}</b>, no wallet, no popup: ${rows.join(" · ")}`;
+}
+
 // Read-only, no wallet: ask the chain itself whether anyone can still change the rules.
 async function chainProof() {
   const el = $("end-chain");
+  const chain = S.chain;
+  await chain?.settled();
   try {
     const res = await fetch(CHAIN.rpc, {
       method: "POST",
@@ -2290,7 +2312,7 @@ async function chainProof() {
     const body = await res.json();
     const keys = body.result?.keys;
     if (!Array.isArray(keys)) return;
-    el.innerHTML = `Live from NEAR testnet: <b>${keys.length} keys</b> on ${CHAIN.contract}. The town's rules are on chain, and nobody can change them or print a unit.`;
+    el.innerHTML = `Live from NEAR testnet: <b>${keys.length} keys</b> on ${CHAIN.contract}. The town's rules are on chain, and nobody can change them or print a unit.${receiptsHtml(chain)}`;
     el.classList.remove("hidden");
   } catch {
     // offline or blocked: the end screen simply goes without the proof
@@ -2390,10 +2412,16 @@ function renderHud() {
 
 // ------------------------------------------------------------ start
 function startRun(kind, again = null) {
-  const seed = again ?? (kind === "salt" ? Number(qs.get("seed")) || 1 : crypto.getRandomValues(new Uint32Array(1))[0] % 100000);
+  const seed = again ?? (kind === "salt" ? Number(qs.get("seed")) || SALT_SEED : crypto.getRandomValues(new Uint32Array(1))[0] % 100000);
   unlockAudio();
   music(true);
   newRun(kind, seed);
+  if (kind === "salt" && CHAIN.play && seed === CHAIN.seed && crypto.subtle) {
+    guest ??= createChainPlay(CHAIN);
+    guest.state.receipts = [];
+    S.chain = guest;
+    guest.start();
+  }
   $("title").classList.add("hidden");
   $("hud").classList.remove("hidden");
   $("end").classList.add("hidden");
@@ -2409,6 +2437,7 @@ function startRun(kind, again = null) {
 // For a quick look or a live demo: day 6, savings in hand, sunset close.
 function jumpToStorm() {
   startRun("salt");
+  S.chain = null;
   const { town, me, rival } = S;
   me.gear.duck = true;
   for (let i = 0; i < 5; i++) {
@@ -2576,7 +2605,7 @@ function boot() {
   Object.defineProperty(lampGlow.material, "opacity", { get: () => lampGlow.material.uniforms.opacity.value, set: (v) => (lampGlow.material.uniforms ? (lampGlow.material.uniforms.opacity.value = v) : 0), configurable: true });
   scene.add(lampGlow);
 
-  newRun("salt", Number(qs.get("seed")) || 1);
+  newRun("salt", Number(qs.get("seed")) || SALT_SEED);
   bindTouch();
   $("loading").textContent = "";
   $("title").classList.remove("hidden");
@@ -2616,6 +2645,7 @@ if (qs.has("debug")) {
     gpu: () => glInfo,
     start: startRun,
     jumpToStorm,
+    setChain: (c) => (CHAIN = c),
     trade,
     use,
     startFishing,

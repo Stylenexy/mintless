@@ -23,7 +23,7 @@ npm run judge
 
 It runs, in about 15 seconds:
 
-1. `npm test`: 41 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player rules: swaps never create goods, day 1 needs a barter chain, a steady player finishes the boat after the storm, a sloppy one stays stranded).
+1. `npm test`: 48 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player rules: swaps never create goods, day 1 needs a barter chain, a steady player finishes the boat after the storm, a sloppy one stays stranded).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
 3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
@@ -35,7 +35,7 @@ Expected output (abridged):
 ✔ if every good spoils alike, the town still picks a money, and history decides which
 ✔ pure barter feeds nobody; money feeds the town
   first money by good: 160 / 120 / 140 / 180 / 160; slowest-spoiling good won 50%
-ℹ pass 41  ℹ fail 0
+ℹ pass 48  ℹ fail 0
   salt became money in 500/500 towns, median day 3, latest day 11
   after the rain, cloth replaced it in 500/500 towns, median 3 days, slowest 6
 PASS | access keys on the contract account: 0
@@ -114,7 +114,15 @@ Contract: [`mintless-mvznw81o.testnet`](https://testnet.nearblocks.io/address/mi
 
 Testnet run (`tools/chain-report.txt`): rules hash matched, player joined and swapped, 10 days in one call, chain = local engine, key deleted (0 keys left), a stranger then advanced the town to day 30, the rain switched the money to cloth exactly as locally, supply only went down. 10 PASS, 0 FAIL.
 
-Version note: the deployed contract was built from commit `dd1f4f5`, before mystery towns existed. Mystery towns only add the "rain on the hoard" event (`good: -1`); Salt Town behaves identically in both versions, which is why its on-chain fingerprint still matches today's engine. A redeploy from the current source is pending (the testnet account helper rate-limited us).
+Version note: the deployed contract was built from commit `dd1f4f5`, before mystery towns and the shipwright existed. Salt Town behaves the same in both versions, which is why its on-chain fingerprint still matches today's engine.
+
+### The shipwright on chain: built, not live yet
+
+The next deploy moves the game's core rule into the contract. `build(part, town_day, good)` recomputes the town from its seed and rules up to that morning, finds the good the town accepts most, refuses anything else, and burns the price from the caller's on-chain bag. So what counts as money on day 7 is decided by the contract, not by the browser.
+
+The browser side is in `web/chain-play.js`: a guest account made by the testnet helper, a key in localStorage, each boat part signed with the browser's own WebCrypto, no wallet and no popup, and a receipt per part on the end screen. Payments never block the game.
+
+What has been proved so far: the signer matches `near-api-js` byte for byte (`test/chain-play.test.js`), and the live testnet RPC parsed a transaction from it and answered `SignerDoesNotExist`, as it should for an account that does not exist. The compiled contract passes `npm run check:wasm` (14 checks in a stand-in NEAR host, including refusing salt on day 7). What has not: no guest has paid on testnet yet, because the testnet account helper is rate limiting this machine (HTTP 429). Until the redeploy the game stays local, and when the helper says no it says so on the end screen.
 
 Not implemented on purpose: NEP-245 approvals and `*_transfer_call`. Transfers go only to accounts that joined (keeps storage bounded; the contract pays storage).
 
@@ -127,7 +135,7 @@ Not implemented on purpose: NEP-245 approvals and `*_transfer_call`. Transfers g
 | Merchant rules in one readable file, with reasoning | `rules/town.js`; villagers say why they refuse, from the same rule |
 | Fast-forward mode | every night the town runs three days; `tick(days)` on chain (10 days per call) |
 | Loop designed on paper first | see "The game loop" above |
-| Social login, no wallet popups | not built: the browser game needs no wallet at all because it plays locally; the on-chain town is played by `tools/chain.mjs` with throwaway testnet accounts |
+| Social login, no wallet popups | no login at all: a guest account and in-browser signing are built (`web/chain-play.js`) but not live yet, see "The shipwright on chain"; today the browser game plays locally |
 | Judged on the loop, not the token | there is no token to buy; goods only exist inside the town |
 
 ## Built during the hackathon
@@ -136,8 +144,8 @@ All code in this repository was written from 3 November 2026 on, during the even
 
 ## Honest limits
 
-- The browser game runs the same engine locally; the testnet town is the verifiable copy. Playing the browser game does not sign transactions yet, so there is no wallet popup but also no on-chain bag. The player loop (catch, boat, shipyard) is not in the contract yet. Social login is not built.
-- The town does not react to the player: you are a price taker at the town stall. The stall's own stock does not spoil.
+- The browser game runs the same engine locally; the testnet town is the verifiable copy. Fishing and barter with villagers stay in the browser even after the redeploy: the chain can prove what the shipyard accepted and burned, not that you caught the fish. Your on-chain bag is a fixed starter bag (32 of each good, from a chest that never refills), separate from the bag on screen.
+- The town does not react to the player: your swaps last until dusk, then every trader goes back to what they held at dawn. That keeps the town's path a pure function of rules and seed, which is what lets the contract recompute it. The town stall is the only market on chain. The stall's own stock does not spoil.
 - Prices are the traders' average notebook values (1 to 100), a measure of tradeability, not a market-clearing price.
 - Testnet only, not audited, one town with five goods by design.
 - Prior art: the browser game *WTH Is Money?* (loathwine, Oct 2026) teaches the same idea with a village barter market; it is not on chain. Agent-based emergence of money is classic research (Marimon, McGrattan and Sargent 1990). What is new here is a playable town where the emergence runs inside a contract nobody controls.
@@ -159,6 +167,7 @@ scripts/verify-chain.js   read-only check of the testnet town
 web/                 the game (game.js; kit.js = toon look, island3d.js = the island, people.js = everyone in it, audio.js = synthesized sound), the lab page (lab.html), earlier versions (2d/, v4/), Three.js (vendor/)
 contract/            NEAR contract (Rust) + parity fixtures
 tools/chain.mjs      deploy to testnet with throwaway accounts, play, delete the last key
+tools/wasm-check.mjs runs the compiled contract in a stand-in NEAR host, no network
 ```
 
 Contract work (needs Rust and the `wasm32-unknown-unknown` target; on Windows set `AWS_LC_SYS_PREBUILT_NASM=1`):
@@ -166,13 +175,14 @@ Contract work (needs Rust and the `wasm32-unknown-unknown` target; on Windows se
 ```
 npm run test:contract      # 15 Rust tests, including JS/Rust parity for Salt Town and mystery towns
 npm run build:contract
+npm run check:wasm           # the real wasm, the shipwright's rules, no network
 npm run deploy:testnet     # new throwaway town, played and locked; add -- --keep to lock it live later
 ```
 
 ## Tools and libraries
 
 - Engine, tests and scripts: plain JavaScript on Node.js built-ins, no npm dependencies. 3D rendering: Three.js r160, vendored in `web/vendor/`.
-- Contract: Rust with `near-sdk` 5.30.0. Deploy tool only: `near-api-js` 7.4.0.
+- Contract: Rust with `near-sdk` 5.30.0. Deploy tool only: `near-api-js` 7.4.0. The browser signs with WebCrypto, no library. RPC: FastNEAR's public testnet endpoint (0.3 s per call from here, against 3.2 s for `rpc.testnet.near.org`).
 - Fonts: Lilita One and Baloo 2 (game); Fraunces, Nunito, JetBrains Mono (lab page), all from Google Fonts. All terrain, 3D characters, goods, music and sound are made in code. The fish cards and two portraits in `web/art.js` were made with an image generator (OpenAI Codex image tool) from our own prompts.
 - AI: code and documentation were written with AI coding assistants (Claude Code; OpenCode drafted `web/audio.js`), listed here as the hackathon rules ask. The engine and chain claims in this README are checked by the commands above; the Growtopia prices come from the sources listed.
 

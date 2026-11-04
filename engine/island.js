@@ -124,8 +124,12 @@ export const worthNow = (town, v) => {
 export const spendable = (town, v) => v.bag[shopGood(town)];
 
 // Night: stock spoils and the town trades three days. Returns what changed.
+// Swaps with a visitor last until dusk: every trader goes back to what they
+// held at dawn, so the town's path depends only on its rules and seed, and the
+// contract can recompute the shipyard's good for any morning.
 export function nightFall(town, v, others = []) {
   const before = town.history[town.history.length - 1];
+  town.agents.forEach((a, i) => (a.holds = town.dawn ? town.dawn[i] : a.makes));
   const lost = v.bag.map(() => 0);
   const reports = [];
   for (let i = 0; i < TOWN_DAYS_PER_NIGHT; i++) {
@@ -133,6 +137,7 @@ export function nightFall(town, v, others = []) {
     for (const o of others) spoilNight(o, town);
     reports.push(step(town));
   }
+  town.dawn = town.agents.map((a) => a.holds);
   const report = reports[reports.length - 1];
   return { lost, report, reports, newMoney: report.money !== before.money ? report.money : null };
 }

@@ -16,6 +16,7 @@
     "start": "node scripts/serve.js",
     "test:contract": "cd contract && cargo test",
     "build:contract": "cd contract && cargo build --target wasm32-unknown-unknown --release",
+    "check:wasm": "node tools/wasm-check.mjs",
     "deploy:testnet": "npm --prefix tools install && node tools/chain.mjs",
     "bundle": "node scripts/bundle.js"
   }
