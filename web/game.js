@@ -910,7 +910,14 @@ function lowerQuality() {
   crowd.lines(false);
 }
 
+// 60 frames is plenty here. A 165 Hz screen would otherwise cook a laptop for nothing.
+const FRAME_MS = 1000 / 60;
+let nextFrame = 0;
+
 function frame(now) {
+  requestAnimationFrame(frame);
+  if (now < nextFrame) return;
+  nextFrame = Math.max(nextFrame + FRAME_MS, now);
   const ms = now - last;
   const dt = Math.min(0.05, ms / 1000);
   last = now;
@@ -922,7 +929,6 @@ function frame(now) {
   } catch (err) {
     console.error(err);
   }
-  requestAnimationFrame(frame);
 }
 
 // ------------------------------------------------------------ input
