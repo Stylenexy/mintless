@@ -68,6 +68,8 @@ Nothing in the engine mentions any good by name (a test checks this). "Money" is
 
 ### Evidence (from `npm run judge`)
 
+Every claim, how to check it, and what is not claimed yet: [CLAIMS.md](CLAIMS.md).
+
 | Claim | Result |
 |---|---|
 | Same seed, same town | identical state hash and history |
@@ -114,7 +116,7 @@ Contract: [`mintless-mvznw81o.testnet`](https://testnet.nearblocks.io/address/mi
 
 Testnet run (`tools/chain-report.txt`): rules hash matched, player joined and swapped, 10 days in one call, chain = local engine, key deleted (0 keys left), a stranger then advanced the town to day 30, the rain switched the money to cloth exactly as locally, supply only went down. 10 PASS, 0 FAIL.
 
-Version note: the deployed contract was built from commit `dd1f4f5`, before mystery towns and the shipwright existed. Salt Town behaves the same in both versions, which is why its on-chain fingerprint still matches today's engine.
+Version note: the deployed contract was built from the commit "NEAR contract: town runs on-chain" on 3 November, before mystery towns and the shipwright existed. Salt Town behaves the same in both versions, which is why its on-chain fingerprint still matches today's engine.
 
 ### The shipwright on chain: built, not live yet
 
