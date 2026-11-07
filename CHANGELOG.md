@@ -2,6 +2,14 @@
 
 Newest first. The git history has the full order.
 
+## 2026-11-07
+
+- First voyage: a boat at about half price and no deadline, so a new player reaches the sail. Every later island is the full game.
+- The gold trail no longer doubles back, and a gold marker floats over the next stop.
+- Villagers stand further apart, the guide's villager wins when several are in reach, and a swap off the route asks first.
+- Drag turns and tilts the view everywhere.
+- A proper sound for a catch, and a golden hour with +1 fish and its own rare fish.
+
 ## 2026-11-05
 
 - Rendering capped at 60 frames per second.

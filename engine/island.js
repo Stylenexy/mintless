@@ -26,11 +26,12 @@ export const GEAR = [
   { key: "rod", name: "Long rod", cost: 3, what: "+1 fish on every catch" },
 ];
 
-export function createRun(rules, keep = {}) {
+export function createRun(rules, keep = {}, { firstVoyage = false } = {}) {
   const v = createVisitor(rules, { key: "castaway", makes: 1, needs: 0 }, 0);
   v.swaps = Infinity;
   v.parts = 0;
   v.gear = {};
+  v.firstVoyage = firstVoyage;
   v.keep = { ...keep };
   v.caught = 0;
   v.spent = rules.goods.map(() => 0);
@@ -66,7 +67,10 @@ export function shopGood(town) {
   return accept.indexOf(Math.max(...accept));
 }
 
-export const nextPart = (v) => PARTS[v.parts] || null;
+// Someone's first island pays about half and has no deadline, so nobody's first run
+// ends with the boat on the sand. Every island after that pays in full.
+export const partCost = (v, part) => (v.firstVoyage ? Math.ceil(part.cost * 0.6) : part.cost);
+export const nextPart = (v) => (PARTS[v.parts] ? { ...PARTS[v.parts], cost: partCost(v, PARTS[v.parts]) } : null);
 export const boatDone = (v) => v.parts >= PARTS.length;
 
 function pay(town, v, cost) {
@@ -140,6 +144,16 @@ export function nightFall(town, v, others = []) {
   town.dawn = town.agents.map((a) => a.holds);
   const report = reports[reports.length - 1];
   return { lost, report, reports, newMoney: report.money !== before.money ? report.money : null };
+}
+
+// A walking route runs you to the nearest road junction first. When that
+// junction is behind you, or past the goal, the dots would double back, so skip it.
+export function trimRoute(route) {
+  const fold = (a, b, c) => (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1]) < 0;
+  const r = route.slice();
+  while (r.length > 2 && fold(r[0], r[1], r[2])) r.splice(1, 1);
+  while (r.length > 2 && fold(r[r.length - 3], r[r.length - 2], r[r.length - 1])) r.splice(r.length - 2, 1);
+  return r;
 }
 
 // A sensible day, for tests and balance: `casts` catches at `score`, walk the

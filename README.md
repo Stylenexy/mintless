@@ -23,7 +23,7 @@ npm run judge
 
 It runs, in about 15 seconds:
 
-1. `npm test`: 48 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player rules: swaps never create goods, day 1 needs a barter chain, a steady player finishes the boat after the storm, a sloppy one stays stranded).
+1. `npm test`: 52 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player rules: swaps never create goods, day 1 needs a barter chain, a steady player finishes the boat after the storm, a sloppy one stays stranded).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
 3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
@@ -90,7 +90,7 @@ Salt Town is the tutorial and the proof: its rules are fixed, so the claims abov
 
 Five rounds of testing by one player, the builder, shaped this. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
 
-**Goal: fix four boat parts before the tenth night.** Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
+**Goal: fix four boat parts before the tenth night.** Your first island pays about half and has no deadline, so a first run reaches the sail; every island after that is the full game. Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
 
 - **Fish.** Walk to a pier and the camera glides into first person. Cast at the ripples, watch the float, strike when it plunges, then pull against the fish with A and D. Skill alone decides the catch; there are no dice. Nine species, one of which only bites in the storm.
 - **Swap.** Villagers show what they want and what they give. A green bubble means they can swap with you; press E and the goods fly across. There are no coins and no menus: goods for goods, judged by the same `willTake` rule the villagers use with each other. On day 1 a fish takes four swaps across the island to become salt. By day 3 it takes one. That is what money does.

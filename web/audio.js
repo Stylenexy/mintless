@@ -185,8 +185,9 @@ export function sfx(name) {
       auNoiseBurst(0.1, 0.2, 'bandpass', 2600, 900, t, 3);
       auPing('sine', 220, 60, 0.18, 0.14, t + 0.02, 800);
       break;
-    case 'catch': // rising 4-note happy arpeggio
-      [392, 494, 587, 784].forEach((f, i) => auBell(f, t + i * 0.09, 0.18, 0.1));
+    case 'catch': // splash, then a bright rising run: the one sound that means you got it
+      auNoiseBurst(0.3, 0.14, 'lowpass', 1800, 400, t);
+      [523, 659, 784, 1047].forEach((f, i) => auPing('triangle', f, f, 0.16, 0.16, t + 0.06 + i * 0.075, 3000));
       break;
     case 'swap': auTap(t); auTap(t + 0.11); break;
     case 'deny': // soft low double thud

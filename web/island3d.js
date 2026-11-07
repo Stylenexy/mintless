@@ -541,10 +541,10 @@ export function buildIsland(scene, tier) {
   for (const v of VILLAGES) {
     spots[v.role] = [];
     for (let i = 0; i < 80 && spots[v.role].length < 8; i++) {
-      const a = (i * 2.4) % 6.28, r = 3.5 + (i % 5) * 1.5;
+      const a = (i * 2.4) % 6.28, r = 5 + (i % 5) * 2.4;
       const x = v.x + Math.cos(a) * r, z = v.z + Math.sin(a) * r * 0.85;
       if (hitSolid(x, z, 1.1)) continue;
-      if (spots[v.role].some((s) => Math.hypot(s.x - x, s.z - z) < 2.8)) continue;
+      if (spots[v.role].some((s) => Math.hypot(s.x - x, s.z - z) < 4.8)) continue;
       spots[v.role].push({ x, z });
     }
   }

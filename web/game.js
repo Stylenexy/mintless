@@ -8,7 +8,7 @@ import { SALT_TOWN } from "../rules/town.js";
 import { mysteryRules } from "../engine/mystery.js";
 import { answer, wantsOf, offer } from "../engine/visitor.js";
 import { createChainPlay } from "./chain-play.js";
-import { createRun, catchFish, shopGood, buyPart, buyGear, bestGive, givesFor, routeTo, worthNow, nightFall, nextPart, boatDone, bagCount, playDay, PARTS, GEAR, DAYS, TOWN_DAYS_PER_NIGHT } from "../engine/island.js";
+import { trimRoute, createRun, catchFish, shopGood, buyPart, buyGear, bestGive, givesFor, routeTo, worthNow, nightFall, nextPart, boatDone, bagCount, playDay, PARTS, GEAR, DAYS, TOWN_DAYS_PER_NIGHT } from "../engine/island.js";
 import { U, toon, ink, inked, hex, noise2, brush, sstep } from "./kit.js";
 import { SIZE, VILLAGES, SQUARE, CAMP, WRECK, DOCKS, NODES, EDGES, buildIsland, heightAt, groundAt, hitSolid, makeSky, makeClouds, makeRain } from "./island3d.js";
 import { makeCrowd, makeHero, makeDuck, makeKeeper, makeBoat, goodGeo, fishGeo } from "./people.js";
@@ -91,7 +91,9 @@ const cam = {
   focus: new THREE.Vector3(64, 2, 64), fv: new THREE.Vector3(),
   dist: 104, dv: 0, pitch: 0.62, pv: 0, yaw: 0.5, yv: 0, fov: 38, fovv: 0, shake: 0, slow: 0, lift: 0, liftV: 0,
 };
-const view = { mode: "orbit", zoom: 26, yaw: 0, drag: null, freeMix: 0, freeMixV: 0, free: { pos: new THREE.Vector3(), yaw: 0, pitch: -0.6 } };
+const view = {
+  turn: 0,
+  tilt: 0.9, mode: "orbit", zoom: 26, yaw: 0, drag: null, freeMix: 0, freeMixV: 0, free: { pos: new THREE.Vector3(), yaw: 0, pitch: -0.6 } };
 
 function resize() {
   const r = $("stage").getBoundingClientRect();
@@ -164,7 +166,7 @@ function saveBook() {
 function newRun(kind, seed) {
   const rules = kind === "mystery" ? mysteryRules(seed) : structuredClone(SALT_TOWN);
   const town = createTown(rules, seed);
-  const me = createRun(rules);
+  const me = createRun(rules, {}, { firstVoyage: !CHAIN.play && !crowned() });
   const rival = createRun(rules);
   const dockEnd = WORLD.objects.find((o) => o.kind === "dock");
   S = {
@@ -207,6 +209,13 @@ function fishToGood(g) {
   return r ? r.length : 0;
 }
 const shop = () => shopGood(S.town);
+const crowned = () => {
+  try {
+    return localStorage.getItem("mintless-crown") === "1";
+  } catch {
+    return false;
+  }
+};
 const dayNum = () => Math.floor(S.town.day / TOWN_DAYS_PER_NIGHT) + 1;
 const rainEvent = () => S.rules.events[0] || null;
 const rainGood = () => (S.town.eventGoods.length ? S.town.eventGoods[0] : -1);
@@ -215,6 +224,7 @@ const raining = () => {
   const ev = rainEvent();
   return !!ev && S.town.day >= ev.day && rainGood() >= 0;
 };
+const goldenHour = () => S.clock > 0.72 && !S.night;
 const dayLength = () => (S.town.day === 0 ? FIRST_DAY_SECONDS : DAY_SECONDS);
 
 const modalOpen = () => S?.panel !== null || !$("title").classList.contains("hidden") || !$("end").classList.contains("hidden");
@@ -507,15 +517,37 @@ function cycleGive() {
   sfx("open");
 }
 
+// The route's own swap comes first, unless you picked something else with Tab.
+const onRoute = (i) => S.stepInfo?.kind === "swap" && S.stepInfo.traders.includes(i);
+function swapGive(i) {
+  const picked = givesFor(S.town, S.me, i).includes(S.pick);
+  return onRoute(i) && !picked && S.me.bag[S.stepInfo.give] > 0 ? S.stepInfo.give : giveFor(i);
+}
+function swapLabel(near) {
+  if (near?.kind !== "trader") return "swap";
+  const give = swapGive(near.i);
+  return give < 0 ? "talk" : `swap ${pic(give)} for ${pic(S.town.agents[near.i].holds)}`;
+}
+
+let sureTimer = 0;
 function trade(i) {
   const { town, me } = S;
   const p = V[i];
-  const give = giveFor(i);
+  const give = swapGive(i);
   if (give < 0) {
     p.hop = 0.5;
     sfx("deny");
     return say(i, lineFor(i));
   }
+  if (!onRoute(i) && S.sure !== i) {
+    S.sure = i;
+    clearTimeout(sureTimer);
+    sureTimer = setTimeout(() => S && (S.sure = null), 3000);
+    p.hop = 0.5;
+    sfx("open");
+    return say(i, `That's off your route. ${touchDevice ? "Tap" : "Press E"} again to give ${GOODS[give]} for ${GOODS[town.agents[i].holds]}.`, 3000);
+  }
+  S.sure = null;
   const res = offer(town, me, i, give);
   if (!res.ok) {
     sfx("deny");
@@ -523,6 +555,7 @@ function trade(i) {
   }
   S.ver++;
   S.swaps++;
+  S.routeT = 0;
   p.hop = 1;
   sfx("swap");
   babble(170 + (i % 8) * 36, 3);
@@ -707,7 +740,7 @@ function placeCamera(dt) {
     goal = { fx: b.x, fy: 2, fz: b.z, dist: 26, pitch: 0.3, yaw: view.yaw + (b.t || 0) * 0.14, fov: 40, smooth: 0.8 };
   } else {
     const riding = you.riding ? 1.25 : 1;
-    goal = { fx: you.x, fy: you.y + 1, fz: you.z, dist: view.zoom * riding * (touchPortrait() ? 1.25 : 1), pitch: 0.9, yaw: 0, fov: 38, smooth: 0.42 };
+    goal = { fx: you.x, fy: you.y + 1, fz: you.z, dist: view.zoom * riding * (touchPortrait() ? 1.25 : 1), pitch: view.tilt, yaw: view.turn, fov: 38, smooth: 0.42 };
   }
   // while the player runs, look a little ahead
   const lead = view.mode === "roam" ? 0.28 : 0;
@@ -770,6 +803,7 @@ function chooseMode() {
   if (want !== view.mode) {
     view.mode = want;
     if (want === "third") view.yaw = cam.yaw;
+    else view.turn = cam.yaw;
   }
 }
 
@@ -785,6 +819,10 @@ function update(dt, now) {
   const paused = !$("title").classList.contains("hidden") || S.panel || S.ended;
   if (!paused && !S.night && !S.parting) {
     S.clock += dt / dayLength();
+    if (goldenHour() && S.goldenDay !== S.town.day) {
+      S.goldenDay = S.town.day;
+      toast("Golden hour: every catch gives +1 fish, and the Lantern Puffer is out.");
+    }
     if (S.clock > 0.8 && !S.duskTold) {
       S.duskTold = true;
       toast("The sun is going down.");
@@ -1009,7 +1047,10 @@ canvas.addEventListener("pointermove", (e) => {
   const dx = e.clientX - view.drag.x, dy = e.clientY - view.drag.y;
   view.drag = { x: e.clientX, y: e.clientY };
   if (view.mode === "third") view.yaw -= dx * 0.006;
-  else if (view.mode === "free") {
+  else if (view.mode === "roam") {
+    view.turn -= dx * 0.006;
+    view.tilt = clamp(view.tilt + dy * 0.004, 0.35, 1.3);
+  } else if (view.mode === "free") {
     view.free.yaw -= dx * 0.004;
     view.free.pitch = clamp(view.free.pitch - dy * 0.004, -1.5, 0.6);
   }
@@ -1093,6 +1134,8 @@ function findNear() {
         best = { kind: "trader", i };
       }
     });
+    const want = S.stepInfo?.i;
+    if (want !== undefined && Math.hypot(V[want].x - you.x, V[want].z - you.z) < REACH + 0.8) best = { kind: "trader", i: want };
     for (const o of WORLD.objects) {
       const d = Math.hypot(o.x - you.x, o.z - you.z);
       if (o.kind === "bottle" && S.bottles[o.i]) continue;
@@ -1187,7 +1230,7 @@ function refreshStep() {
     if (path && path.length) {
       const hop = path[0];
       const i = nearestTrader(hop.traders);
-      info = { kind: "swap", x: V[i].x, z: V[i].z, html: `Swap ${pic(hop.give)} for ${pic(hop.get)} with a ${ROLE[town.agents[i].role]}`, sub: `${have} of ${item.cost} ${GOODS[g]} for the ${item.name.toLowerCase()}` };
+      info = { kind: "swap", i, traders: hop.traders, give: hop.give, x: V[i].x, z: V[i].z, html: `Swap ${pic(hop.give)} for ${pic(hop.get)} with a ${ROLE[town.agents[i].role]}`, sub: `${have} of ${item.cost} ${GOODS[g]} for the ${item.name.toLowerCase()}` };
     } else {
       const o = nearestDock();
       info = { kind: "fish", x: o.x, z: o.z, html: `Catch fish at the ${o.d.name.toLowerCase()}`, sub: `${have} of ${item.cost} ${GOODS[g]} for the ${item.name.toLowerCase()}` };
@@ -1236,10 +1279,15 @@ function routeOf(ax, az, bx, bz) {
   }
   const nodes = [];
   for (let n = to; n; n = prev[n]) nodes.unshift(NODES[n]);
-  return [[ax, az], ...nodes, [bx, bz]];
+  return trimRoute([[ax, az], ...nodes, [bx, bz]]);
 }
 
+let marker = null;
 function initTrail() {
+  marker = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: 0xffd166, depthTest: false, transparent: true }));
+  marker.renderOrder = 4;
+  marker.visible = false;
+  scene.add(marker);
   const n = 26;
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
@@ -1260,7 +1308,14 @@ function initTrail() {
 function renderTrail(t) {
   const on = canWalk() && S.route.length > 1 && !$("title").classList.contains("hidden") === false;
   trail.visible = !!on;
+  marker.visible = !!on && !!S.stepInfo;
   if (!on) return;
+  if (S.stepInfo) {
+    const step = S.stepInfo, gx = step.i !== undefined ? V[step.i].x : step.x, gz = step.i !== undefined ? V[step.i].z : step.z;
+    marker.position.set(gx, groundAt(gx, gz) + 3.7 + Math.sin(t * 3) * 0.25, gz);
+    marker.rotation.y = t * 1.6;
+    marker.scale.setScalar(clamp(Math.hypot(gx - S.you.x, gz - S.you.z) / 12, 1, 3.5));
+  }
   trail.material.uniforms.uH.value = renderer.domElement.height;
   const route = S.route.slice();
   route[0] = [S.you.x, S.you.z];
@@ -1590,7 +1645,7 @@ const FISH = [
   { name: "River Ribbon", a: "#59d68c", b: "#e4ffd9", f: "#2ec4b6", rank: 1, cm: [30, 52], line: "All muscle, no manners." },
   { name: "Copper Carp", a: "#d98a3d", b: "#ffe0a8", f: "#a85a2a", rank: 2, cm: [40, 64], line: "Old enough to remember barter." },
   { name: "Moon Snapper", a: "#9b8cff", b: "#efe9ff", f: "#5a4ad8", rank: 2, cm: [38, 60], line: "Glows faintly. Nobody knows why." },
-  { name: "Lantern Puffer", a: "#ffd166", b: "#fff4c8", f: "#ff8a3d", rank: 3, cm: [28, 44], line: "Puffs up when you look at it." },
+  { name: "Lantern Puffer", a: "#ffd166", b: "#fff4c8", f: "#ff8a3d", rank: 3, cm: [28, 44], dusk: true, line: "Only comes up in the last gold of the day." },
   { name: "Tide King", a: "#1f8fd6", b: "#d9f4ff", f: "#ffd166", rank: 3, cm: [70, 110], line: "Wears the current like a cape." },
   { name: "Storm Marlin", a: "#47507a", b: "#c9d4ee", f: "#ff5d73", rank: 4, cm: [120, 190], rain: true, line: "Only comes up when the sky breaks." },
 ];
@@ -1746,7 +1801,7 @@ function cast() {
 function pickFish(q) {
   const wet = raining();
   const top = Math.floor(q * 3.3);
-  const pool = FISH.filter((x) => (x.rain ? wet && q > 0.75 : x.rank <= top && x.rank >= top - 1));
+  const pool = FISH.filter((x) => (x.rain ? wet && q > 0.75 : x.dusk ? goldenHour() : x.rank <= top && x.rank >= top - 1));
   return pool[Math.floor(Math.random() * pool.length)] ?? FISH[0];
 }
 
@@ -1793,7 +1848,7 @@ function endFight(won) {
   }
   const score = Math.round(f.castQ * 30 + f.strikeQ * 30 + (1 - f.peak) * 40);
   const hot = f.o.i === hotDock();
-  const got = catchFish(me, score + 15 + (hot ? 25 : 0), raining() ? 1 : 0);
+  const got = catchFish(me, score + 15 + (hot ? 25 : 0), raining() || goldenHour() ? 1 : 0);
   S.ver++;
   f.stage = "card";
   f.t = 0;
@@ -2100,7 +2155,8 @@ function updateNight(dt) {
     S.clock = 0;
     S.duskTold = false;
     sfx("dawn");
-    if (S.town.day >= DAYS * TOWN_DAYS_PER_NIGHT) return finish(false);
+    if (S.town.day >= DAYS * TOWN_DAYS_PER_NIGHT && !S.me.firstVoyage) return finish(false);
+    if (S.town.day === DAYS * TOWN_DAYS_PER_NIGHT) S.banners.push({ title: "The tide waits for you", text: "First voyage, so there is no deadline. The next island will not be so kind.", cls: "" });
     if (S.banners.length) showBanners();
     else toast(`Fish are running at the ${DOCKS[hotDock()].name.toLowerCase()} today.`);
     renderHud();
@@ -2269,7 +2325,7 @@ function finish(won) {
   view.yaw = cam.yaw;
   const { town, me } = S;
   const firstHome = won && (!S.rivalDone || S.won <= S.rivalDone);
-  $("end-kick").textContent = won ? `Day ${S.won} of ${DAYS}` : "The tenth night";
+  $("end-kick").textContent = won ? (S.won > DAYS ? `Day ${S.won}, first voyage` : `Day ${S.won} of ${DAYS}`) : "The tenth night";
   $("end-title").textContent = won ? (firstHome ? "You sailed before Mira" : "You sailed, after Mira") : `Stranded with ${me.parts} of ${PARTS.length} boat parts`;
   const drop = drawChart();
   $("end-sub").textContent = won
@@ -2368,10 +2424,10 @@ function drawKeys() {
   $("t-use").textContent = near?.kind === "dock" ? "Fish" : near?.kind === "yard" ? "Open" : near?.kind === "bed" ? "Sleep" : near?.kind === "trader" ? "Swap" : near?.kind === "bottle" ? "Read" : "Use";
   $("t-use").style.opacity = near ? 1 : 0.5;
   if (touchDevice) return;
-  const verb = near ? { dock: "fish here", yard: "open the shipyard", bed: "sleep", trader: "swap", bottle: "read the note", mira: "talk to Mira" }[near.kind] : null;
+  const verb = near ? { dock: "fish here", yard: "open the shipyard", bed: "sleep", trader: swapLabel(near), bottle: "read the note", mira: "talk to Mira" }[near.kind] : null;
   $("keys").innerHTML = [
     verb ? `<kbd>E</kbd> ${verb}` : "",
-    "<kbd>WASD</kbd> move <kbd>Shift</kbd> sprint <kbd>Space</kbd> jump",
+    "<kbd>WASD</kbd> move <kbd>Shift</kbd> sprint <kbd>Space</kbd> jump <kbd>Drag</kbd> turn view",
     `${S.me.gear.duck ? `<kbd>R</kbd> ${you.riding ? "get off <kbd>Q</kbd> honk" : "ride duck"} ` : ""}<kbd>M</kbd> map <kbd>Ctrl</kbd> + scroll zoom`,
   ].filter(Boolean).join("<br>");
 }
@@ -2649,6 +2705,7 @@ if (qs.has("debug")) {
     info: () => renderer.info.render,
     tier: () => tier,
     gpu: () => glInfo,
+    marker: () => marker,
     start: startRun,
     jumpToStorm,
     setChain: (c) => (CHAIN = c),
