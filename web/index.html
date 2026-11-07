@@ -31,7 +31,7 @@
       </aside>
 
       <div class="daybar glass">
-        <div class="day"><span id="day-n">Day 1</span><span class="dim">of 10</span></div>
+        <div class="day"><span id="day-n">Day 1</span><span id="day-limit" class="dim">no deadline</span></div>
         <div class="sun"><i id="sun"></i></div>
         <div class="town" id="town-money"></div>
         <button id="sleep" class="mini">Sleep</button>
@@ -134,6 +134,11 @@
       <button id="play-next" class="btn huge hidden">Mystery island</button>
       <button id="play-storm" class="btn">Jump to the storm</button>
     </div>
+    <div class="daily-choice">
+      <button id="play-daily" class="btn">Daily island</button>
+      <p class="fine">Same island for everyone. Full prices, 10 days. Resets 00:00 UTC (07:00 WIB). New here? Try Play first.</p>
+      <details><summary>Local daily leaderboard</summary><div id="daily-board" class="daily-board"></div></details>
+    </div>
     <p class="fine"><span id="loading">Building the island...</span> <a href="./lab.html">Rules and on-chain proof</a></p>
   </section>
 
@@ -148,9 +153,11 @@
       </div>
       <p id="end-story" class="story"></p>
       <p id="end-chain" class="chain hidden"></p>
+      <div id="end-daily" class="daily-board hidden" aria-live="polite"></div>
       <div class="row">
         <button id="again" class="btn primary">Next island</button>
         <button id="replay" class="btn">Same island</button>
+        <button id="daily-again" class="btn">Today's daily island</button>
       </div>
     </div>
   </section>

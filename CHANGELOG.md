@@ -4,6 +4,9 @@ Newest first. The git history has the full order.
 
 ## 2026-11-07
 
+- Daily mystery island from the UTC date, with identical full prices and deadline for all players, a seeded fishing sequence and a local top ten per day. No server or contract change.
+- Help remains reachable on small screens; it explains movement, leaving fishing and the gold bag slot. First-voyage help and day counter now say there is no deadline and show the actual day after day ten.
+- Independent baseline: 52 tests pass, old newcomer simulation 0/20 sail and first voyage 20/20. With 17 new checks, 69 pass; the offline bundle builds and parses. No new human or browser playtest.
 - First voyage: a boat at about half price and no deadline, so a new player reaches the sail. Every later island is the full game.
 - The gold trail no longer doubles back, and a gold marker floats over the next stop.
 - Villagers stand further apart, the guide's villager wins when several are in reach, and a swap off the route asks first.

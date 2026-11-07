@@ -13,6 +13,8 @@ import { U, toon, ink, inked, hex, noise2, brush, sstep } from "./kit.js";
 import { SIZE, VILLAGES, SQUARE, CAMP, WRECK, DOCKS, NODES, EDGES, buildIsland, heightAt, groundAt, hitSolid, makeSky, makeClouds, makeRain } from "./island3d.js";
 import { makeCrowd, makeHero, makeDuck, makeKeeper, makeBoat, goodGeo, fishGeo } from "./people.js";
 import { ART } from "./art.js";
+import { helpLines, voyageLimit } from "./help.js";
+import { dailyIsland, dailyRandom, dailySeconds, createDailyBoard, renderDailyBoard } from "./daily.js";
 import { unlockAudio, sfx, babble, ambience, music, musicMood, setMuted, isMuted } from "./audio.js";
 
 const GOODS = ["salt", "fish", "rice", "cloth", "wood"];
@@ -46,6 +48,7 @@ loadChain().catch(() => {
   // keep the built-in address: the end screen only reads from it
 });
 let guest = null;
+const dailyBoard = createDailyBoard();
 // The first island. On this seed the storm moves the shipyard to cloth on the morning of day 7.
 const SALT_SEED = 7;
 const DAY_SECONDS = 80;
@@ -163,14 +166,14 @@ function saveBook() {
   }
 }
 
-function newRun(kind, seed) {
-  const rules = kind === "mystery" ? mysteryRules(seed) : structuredClone(SALT_TOWN);
+function newRun(kind, seed, dailyDate = null) {
+  const rules = kind !== "salt" ? mysteryRules(seed) : structuredClone(SALT_TOWN);
   const town = createTown(rules, seed);
-  const me = createRun(rules, {}, { firstVoyage: !CHAIN.play && !crowned() });
+  const me = createRun(rules, {}, { firstVoyage: kind !== "daily" && !CHAIN.play && !crowned() });
   const rival = createRun(rules);
   const dockEnd = WORLD.objects.find((o) => o.kind === "dock");
   S = {
-    kind, seed, rules, town, me, rival,
+    kind, seed, dailyDate, random: kind === "daily" ? dailyRandom(seed) : Math.random, rules, town, me, rival,
     you: { x: CAMP.x - 1, y: 1.2, z: CAMP.z + 4, vx: 0, vz: 0, vy: 0, air: false, dir: Math.PI * 0.9, walk: 0, moveT: 0, coyote: 0, sq: 1, sqv: 0, riding: false, landed: 0, dust: 0, step: 0 },
     clock: 0, wet: 0, panel: null, near: null, night: null, ended: false, ver: 1, seenVer: 0, stepInfo: null, place: "", book: loadBook(),
     log: [], lost: 0, peakLoss: 0, banners: [], showing: false, fish: null, speak: null, tips: {}, routeT: 0, route: [], sawRain: false, parting: null, firstFish: true, dockEnd,
@@ -976,6 +979,7 @@ document.addEventListener("keydown", (e) => {
   unlockAudio();
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (!$("title").classList.contains("hidden")) {
+    if (e.target.closest?.("button, summary, a")) return;
     if (k === "Enter" || k === " ") startRun(S.kind === "mystery" ? "mystery" : "salt");
     return;
   }
@@ -1713,7 +1717,7 @@ function startFishing(o) {
   S.you.x = o.x;
   S.you.z = o.z;
   S.you.dir = Math.atan2(d.dx, d.dz);
-  S.fish = { o, dock: d, ex: o.x, ez: o.z, stage: "aim", t: 0, pow: 0, zone: 0.3 + Math.random() * 0.5, up: true, charging: false, side: 0, tension: 0, peak: 0, reel: 0 };
+  S.fish = { o, dock: d, ex: o.x, ez: o.z, stage: "aim", t: 0, pow: 0, zone: 0.3 + S.random() * 0.5, up: true, charging: false, side: 0, tension: 0, peak: 0, reel: 0 };
   view.mode = "first";
   $("fishing").classList.remove("hidden");
   $("hud").classList.add("reeling");
@@ -1739,8 +1743,8 @@ const castSpan = (d) => (d.len < 5 ? 3 : 16);
 function placeTarget() {
   const f = S.fish, d = f.dock;
   f.far = castBase(d) + f.zone * castSpan(d);
-  f.tx = f.ex + d.dx * f.far + d.dz * (Math.random() - 0.5) * 3;
-  f.tz = f.ez + d.dz * f.far - d.dx * (Math.random() - 0.5) * 3;
+  f.tx = f.ex + d.dx * f.far + d.dz * (S.random() - 0.5) * 3;
+  f.tz = f.ez + d.dz * f.far - d.dx * (S.random() - 0.5) * 3;
   ring.visible = true;
   ring.position.set(f.tx, 0.12, f.tz);
   $("cast-zone").style.left = `${(f.zone - 0.075) * 100}%`;
@@ -1802,7 +1806,7 @@ function pickFish(q) {
   const wet = raining();
   const top = Math.floor(q * 3.3);
   const pool = FISH.filter((x) => (x.rain ? wet && q > 0.75 : x.dusk ? goldenHour() : x.rank <= top && x.rank >= top - 1));
-  return pool[Math.floor(Math.random() * pool.length)] ?? FISH[0];
+  return pool[Math.floor(S.random() * pool.length)] ?? FISH[0];
 }
 
 function strike() {
@@ -1918,7 +1922,7 @@ function nextCast(delay = 0) {
   fishMesh.visible = false;
   f.stage = "aim";
   f.t = 0;
-  f.zone = 0.3 + Math.random() * 0.5;
+  f.zone = 0.3 + S.random() * 0.5;
   placeTarget();
   renderFish();
 }
@@ -1957,13 +1961,13 @@ function updateFishing(dt) {
     if (k >= 1) {
       f.stage = "wait";
       f.t = 0;
-      f.wait = (f.perfect ? 0.9 : 1.8) + Math.random() * 1.8;
+      f.wait = (f.perfect ? 0.9 : 1.8) + S.random() * 1.8;
       f.nibbles = f.wait > 1.6 ? [f.wait * 0.45] : [];
       sfx("plop");
       burst(f.bx, 0.1, f.bz, 16, [1, 1, 1], 4.4, 0.55, 0.8);
       ring.visible = false;
       shadow.visible = true;
-      f.sa = Math.random() * 6.28;
+      f.sa = S.random() * 6.28;
       renderFish();
     }
   } else if (f.stage === "wait") {
@@ -2008,8 +2012,8 @@ function updateFishing(dt) {
     f.pullT -= dt;
     if (f.pullT <= 0) {
       const opts = f.pull === 0 ? [-1, 1] : [0, -f.pull];
-      f.pull = opts[Math.floor(Math.random() * opts.length)];
-      f.pullT = f.pull ? 0.75 + Math.random() * 0.75 - f.kind.rank * 0.05 : 0.45;
+      f.pull = opts[Math.floor(S.random() * opts.length)];
+      f.pullT = f.pull ? 0.75 + S.random() * 0.75 - f.kind.rank * 0.05 : 0.45;
       if (f.pull) {
         sfx("splash");
         cam.shake = 0.07;
@@ -2305,7 +2309,15 @@ function drawChart() {
 }
 
 function finish(won) {
+  if (S.ended) return;
   S.ended = true;
+  $("end-daily").classList.toggle("hidden", S.kind !== "daily");
+  if (S.kind === "daily") {
+    const seconds = won ? dailySeconds(S.won, S.clock, FIRST_DAY_SECONDS, DAY_SECONDS) : FIRST_DAY_SECONDS + (DAYS - 1) * DAY_SECONDS;
+    dailyBoard.add(S.dailyDate, { won, parts: S.me.parts, seconds });
+    renderDailyBoard($("end-daily"), S.dailyDate, dailyBoard);
+    renderDailyBoard($("daily-board"), dailyIsland().date, dailyBoard);
+  }
   if (won) {
     try {
       localStorage.setItem("mintless-crown", "1");
@@ -2390,15 +2402,7 @@ $("sound").addEventListener("click", toggleSound);
 $("sleep").addEventListener("click", () => S && canWalk() && beginNight());
 $("help").addEventListener("click", () => {
   if (!S || S.fish || S.night) return;
-  const key = (d, t) => (touchDevice ? t : d);
-  $("how").innerHTML = [
-    "<b>Goal:</b> fix four boat parts before the tenth night.",
-    "<b>Gold trail:</b> always leads to your next step.",
-    `<b>Fish:</b> at a pier, ${key("hold Space", "hold the button")} and let go in the gold. When the fish pulls, press the other way.`,
-    `<b>Swap:</b> a green bubble means that villager can swap with you. ${key("Press E", "Tap Swap")}.`,
-    "<b>Pay:</b> the shipyard only takes what the whole town takes. It is marked on your bag. That can change.",
-    `<b>Storm:</b> after day 6 it soaks what people hoard. Spend or swap it first. ${key("R rides your duck, Q honks.", "The Duck button rides your duck.")}`,
-  ].map((l) => `<li>${l}</li>`).join("");
+  $("how").innerHTML = helpLines(S.me.firstVoyage, touchDevice).map((l) => `<li>${l}</li>`).join("");
   openPanel("helpbox");
 });
 
@@ -2453,7 +2457,8 @@ function drawPurse() {
 
 function renderHud() {
   const { me, town, rival } = S;
-  $("day-n").textContent = `Day ${Math.min(DAYS, dayNum())}`;
+  $("day-n").textContent = `Day ${dayNum()}`;
+  $("day-limit").textContent = voyageLimit(me.firstVoyage);
   $("pips").innerHTML = PARTS.map((_, i) => `<i class="${i < me.parts ? "on" : ""}"></i>`).join("");
   const m = money(), g = shop();
   $("town-money").innerHTML = m >= 0 ? `${pic(m)} ${cap(GOODS[m])} is money` : `<span class="no">No money yet</span>`;
@@ -2473,11 +2478,12 @@ function renderHud() {
 }
 
 // ------------------------------------------------------------ start
-function startRun(kind, again = null) {
-  const seed = again ?? (kind === "salt" ? Number(qs.get("seed")) || SALT_SEED : crypto.getRandomValues(new Uint32Array(1))[0] % 100000);
+function startRun(kind, again = null, dailyDate = null) {
+  const daily = kind === "daily" ? dailyIsland(dailyDate ? new Date(`${dailyDate}T00:00:00Z`) : new Date()) : null;
+  const seed = daily ? daily.seed : again ?? (kind === "salt" ? Number(qs.get("seed")) || SALT_SEED : crypto.getRandomValues(new Uint32Array(1))[0] % 100000);
   unlockAudio();
   music(true);
-  newRun(kind, seed);
+  newRun(kind, seed, daily?.date ?? null);
   if (kind === "salt" && CHAIN.play && seed === CHAIN.seed && crypto.subtle) {
     guest ??= createChainPlay(CHAIN);
     guest.state.receipts = [];
@@ -2492,7 +2498,8 @@ function startRun(kind, again = null) {
   if (touchDevice) $("touch").classList.remove("hidden");
   view.mode = "roam";
   cam.slow = 1.7;
-  if (kind === "mystery") toast(`Island #${seed}. Different goods last, so nobody knows what becomes money here.`);
+  if (kind === "daily") toast(`Daily island ${daily.date} UTC. Full prices, 10 days. Results stay on this browser.`);
+  else if (kind === "mystery") toast(`Island #${seed}. Different goods last, so nobody knows what becomes money here.`);
   else say(null, "Your boat broke. Nobody here uses coins. Follow the gold trail.");
   renderHud();
 }
@@ -2523,11 +2530,15 @@ function jumpToStorm() {
 }
 $("play-storm").addEventListener("click", jumpToStorm);
 $("play").addEventListener("click", () => startRun("salt"));
+$("play-daily").addEventListener("click", () => startRun("daily"));
+$("daily-again").addEventListener("click", () => startRun("daily"));
+$("daily-board").parentElement.addEventListener("toggle", () => renderDailyBoard($("daily-board"), dailyIsland().date, dailyBoard));
+renderDailyBoard($("daily-board"), dailyIsland().date, dailyBoard);
 $("play-next").addEventListener("click", () => startRun("mystery"));
 $("again").addEventListener("click", () => startRun("mystery"));
 $("replay").addEventListener("click", () => {
   $("end").classList.add("hidden");
-  startRun(S.kind, S.seed);
+  startRun(S.kind, S.seed, S.dailyDate);
 });
 
 function iconOf(geo, size = 160, yaw = 0.7, tilt = 0.55, span = 0.72, centerY = 0.3) {

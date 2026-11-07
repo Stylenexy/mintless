@@ -23,7 +23,7 @@ npm run judge
 
 It runs, in about 15 seconds:
 
-1. `npm test`: 52 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, and the player rules: swaps never create goods, day 1 needs a barter chain, a steady player finishes the boat after the storm, a sloppy one stays stranded).
+1. `npm test`: 69 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, player rules, newcomer guidance, daily islands, local rankings and the offline bundle).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
 3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
@@ -35,7 +35,7 @@ Expected output (abridged):
 ✔ if every good spoils alike, the town still picks a money, and history decides which
 ✔ pure barter feeds nobody; money feeds the town
   first money by good: 160 / 120 / 140 / 180 / 160; slowest-spoiling good won 50%
-ℹ pass 48  ℹ fail 0
+ℹ pass 69  ℹ fail 0
   salt became money in 500/500 towns, median day 3, latest day 11
   after the rain, cloth replaced it in 500/500 towns, median 3 days, slowest 6
 PASS | access keys on the contract account: 0
@@ -44,6 +44,10 @@ PASS | day 30: chain fingerprint 172d8ea0 = local engine replay; money = cloth
 ```
 
 To play: `npm start`, then open http://localhost:5173 (a season of 10 days takes about 15 minutes, on a laptop or a phone). In a hurry? *Jump to the storm* on the title screen puts you on day 6 with savings in hand, about 30 seconds before they stop being money. No Node? `npm run bundle` writes `dist/mintless.html`, one file that opens in any browser. The dashboard with the rules, the what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
+
+**Daily island:** choose *Daily island* on the title or end screen. Everyone gets the mystery seed `YYYYMMDD` from the current UTC date, changing at 00:00 UTC (07:00 WIB), with full boat prices and a ten-day limit regardless of tutorial progress. Fishing uses its own seeded random sequence. *Same island* retries the original date even across midnight; *Today's daily island* uses the current date.
+
+The *Local daily leaderboard* on the title and the daily end screen keeps ten results per date for seven dates in this browser's localStorage. Sailing ranks above being stranded, then more boat parts, then less game time; exact ties keep the earlier attempt first. Sleeping costs the remainder of a day; menus pause time. With storage blocked or full, results last only for the session. This is a local comparison of attempts, with no server, shared scores, clock verification or protection from editing saves. New players should try *Play* first; Help stays available on small screens and explains the first voyage's lack of deadline.
 
 ## Why this exists
 
