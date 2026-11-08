@@ -2,6 +2,10 @@
 
 Newest first. The git history has the full order.
 
+## 2026-11-09
+
+- The title screen shows one button, Play, to a first-time player. Daily island and Mystery island appear after the first sail; Jump to the storm needs the `?demo` link.
+
 ## 2026-11-07
 
 - Daily mystery island from the UTC date, with identical full prices and deadline for all players, a seeded fishing sequence and a local top ten per day. No server or contract change.

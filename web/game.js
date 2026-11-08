@@ -2534,6 +2534,11 @@ $("play-daily").addEventListener("click", () => startRun("daily"));
 $("daily-again").addEventListener("click", () => startRun("daily"));
 $("daily-board").parentElement.addEventListener("toggle", () => renderDailyBoard($("daily-board"), dailyIsland().date, dailyBoard));
 renderDailyBoard($("daily-board"), dailyIsland().date, dailyBoard);
+// A newcomer sees one door: Play. The daily and mystery islands open after the
+// first sail, and the storm shortcut is for judges who open the ?demo link.
+if (!qs.has("demo")) $("play-storm").classList.add("hidden");
+if (!crowned()) document.querySelector(".daily-choice").classList.add("hidden");
+else $("play-next").classList.remove("hidden");
 $("play-next").addEventListener("click", () => startRun("mystery"));
 $("again").addEventListener("click", () => startRun("mystery"));
 $("replay").addEventListener("click", () => {
