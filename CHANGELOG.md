@@ -4,6 +4,7 @@ Newest first. The git history has the full order.
 
 ## 2026-11-09
 
+- When nobody will take what you carry today, the guide says to sleep (the village trades again at dawn) instead of telling you to keep fishing.
 - The title screen shows one button, Play, to a first-time player. Daily island and Mystery island appear after the first sail; Jump to the storm needs the `?demo` link.
 
 ## 2026-11-07

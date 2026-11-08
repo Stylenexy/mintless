@@ -6,7 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createTown } from "../engine/town.js";
 import { SALT_TOWN } from "../rules/town.js";
-import { createRun, catchFish, shopGood, buyPart, buyGear, routeTo, nightFall, nextPart, boatDone, trimRoute, GEAR, DAYS, PARTS } from "../engine/island.js";
+import { createRun, catchFish, shopGood, buyPart, buyGear, routeTo, nightFall, nextPart, boatDone, trimRoute, stuckToday, GEAR, DAYS, PARTS } from "../engine/island.js";
 import { offer } from "../engine/visitor.js";
 
 const VILLAGE = [[24, 84], [106, 94], [108, 44], [25, 42], [60, 19]]; // by good
@@ -83,4 +83,31 @@ test("the route never starts by walking backwards", () => {
   assert.deepEqual(trimRoute([[0, 0], [10, 0], [20, 0], [15, 0]]), [[0, 0], [10, 0], [15, 0]]);
   assert.deepEqual(trimRoute([[0, 0], [10, 0], [10, 10]]), [[0, 0], [10, 0], [10, 10]]);
   assert.deepEqual(trimRoute([[0, 0], [5, 5]]), [[0, 0], [5, 5]]);
+});
+
+test("a bag nobody wants today means go to bed, and dawn fixes it", (t) => {
+  let stuck = 0, freed = 0;
+  for (const seed of SEEDS) {
+    const town = createTown(SALT_TOWN, seed);
+    const me = createRun(SALT_TOWN, {}, { firstVoyage: true });
+    for (let night = 1; night <= 9; night++) {
+      for (let i = 0; i < 3; i++) catchFish(me, WEAK_CAST);
+      for (let k = 0; k < 40; k++) {
+        const g = shopGood(town), path = routeTo(town, me, g);
+        if (!path?.length) break;
+        offer(town, me, path[0].traders[0], path[0].give);
+      }
+      const g = shopGood(town);
+      if (stuckToday(town, me, g)) {
+        stuck++;
+        nightFall(town, me);
+        if (!stuckToday(town, me, shopGood(town))) freed++;
+      } else nightFall(town, me);
+    }
+  }
+  t.diagnostic(`stuck ${stuck} times, free after one night ${freed}`);
+  assert.ok(stuck > 0, "the stuck case really happens");
+  assert.ok(freed >= stuck * 0.7, "sleeping gets the bag moving again in most cases");
+  const town = createTown(SALT_TOWN, 1), me = createRun(SALT_TOWN);
+  assert.equal(stuckToday(town, me, shopGood(town)), false, "an empty bag is not stuck, it needs fish");
 });

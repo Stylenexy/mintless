@@ -8,7 +8,7 @@ import { SALT_TOWN } from "../rules/town.js";
 import { mysteryRules } from "../engine/mystery.js";
 import { answer, wantsOf, offer } from "../engine/visitor.js";
 import { createChainPlay } from "./chain-play.js";
-import { trimRoute, createRun, catchFish, shopGood, buyPart, buyGear, bestGive, givesFor, routeTo, worthNow, nightFall, nextPart, boatDone, bagCount, playDay, PARTS, GEAR, DAYS, TOWN_DAYS_PER_NIGHT } from "../engine/island.js";
+import { trimRoute, stuckToday, createRun, catchFish, shopGood, buyPart, buyGear, bestGive, givesFor, routeTo, worthNow, nightFall, nextPart, boatDone, bagCount, playDay, PARTS, GEAR, DAYS, TOWN_DAYS_PER_NIGHT } from "../engine/island.js";
 import { U, toon, ink, inked, hex, noise2, brush, sstep } from "./kit.js";
 import { SIZE, VILLAGES, SQUARE, CAMP, WRECK, DOCKS, NODES, EDGES, buildIsland, heightAt, groundAt, hitSolid, makeSky, makeClouds, makeRain } from "./island3d.js";
 import { makeCrowd, makeHero, makeDuck, makeKeeper, makeBoat, goodGeo, fishGeo } from "./people.js";
@@ -1235,6 +1235,9 @@ function refreshStep() {
       const hop = path[0];
       const i = nearestTrader(hop.traders);
       info = { kind: "swap", i, traders: hop.traders, give: hop.give, x: V[i].x, z: V[i].z, html: `Swap ${pic(hop.give)} for ${pic(hop.get)} with a ${ROLE[town.agents[i].role]}`, sub: `${have} of ${item.cost} ${GOODS[g]} for the ${item.name.toLowerCase()}` };
+    } else if (stuckToday(town, me, g) && WORLD.objects.some((o) => o.kind === "bed")) {
+      const bed = WORLD.objects.find((o) => o.kind === "bed");
+      info = { kind: "sleep", x: bed.x, z: bed.z, html: "Nobody wants what you carry today. <b>Sleep</b>: the village trades again at dawn", sub: `${have} of ${item.cost} ${GOODS[g]} for the ${item.name.toLowerCase()}` };
     } else {
       const o = nearestDock();
       info = { kind: "fish", x: o.x, z: o.z, html: `Catch fish at the ${o.d.name.toLowerCase()}`, sub: `${have} of ${item.cost} ${GOODS[g]} for the ${item.name.toLowerCase()}` };

@@ -119,6 +119,13 @@ export function routeTo(town, v, goal) {
   return shortestPath(town, { needs: goal }, bag);
 }
 
+// True when you carry something but no villager will take it before dusk
+// (the ones who would have already swapped with you). Fishing more cannot help;
+// sleeping resets every trader, so the right advice is to go to bed.
+export function stuckToday(town, v, goal) {
+  return v.bag.some((units, g) => g !== goal && units > 0) && !routeTo(town, v, goal)?.length;
+}
+
 export const worthNow = (town, v) => {
   const p = prices(town);
   return v.bag.reduce((sum, units, g) => sum + units * p[g], 0);

@@ -23,7 +23,7 @@ npm run judge
 
 It runs, in about 15 seconds:
 
-1. `npm test`: 69 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, player rules, newcomer guidance, daily islands, local rankings and the offline bundle).
+1. `npm test`: 70 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, player rules, newcomer guidance, daily islands, local rankings and the offline bundle).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
 3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
@@ -35,7 +35,7 @@ Expected output (abridged):
 ✔ if every good spoils alike, the town still picks a money, and history decides which
 ✔ pure barter feeds nobody; money feeds the town
   first money by good: 160 / 120 / 140 / 180 / 160; slowest-spoiling good won 50%
-ℹ pass 69  ℹ fail 0
+ℹ pass 70  ℹ fail 0
   salt became money in 500/500 towns, median day 3, latest day 11
   after the rain, cloth replaced it in 500/500 towns, median 3 days, slowest 6
 PASS | access keys on the contract account: 0
