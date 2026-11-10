@@ -1,3 +1,5 @@
+**Play it now, no install, no account: https://mintless-island.vercel.app** (works on a phone) | [Report an issue](https://github.com/Stylenexy/mintless/issues)
+
 # Mintless: the town that picks its own money
 
 In 2016 one Growtopia Diamond Lock sold for Rp100,000. In 2026 it sells for Rp299: savings in a game currency, gone, because someone kept printing.
