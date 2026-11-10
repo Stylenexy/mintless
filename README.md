@@ -7,7 +7,7 @@ In 2016 one Growtopia Diamond Lock sold for Rp100,000. In 2026 it sells for Rp29
 Mintless is the opposite. You wash up on an island with no coins and a broken boat. 40 villagers barter salt, fish, rice, cloth and wood, and within days they all start taking one good: money, born on its own. You save it for your boat. Then a storm rots it, the town moves on to cloth, and your savings stop being money overnight. Nobody decided that, and nobody, including the developer, can print a single extra unit. The town did it, and reading the town could have saved you.
 
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
-Also by the same builder: **Amplop Balas** (track *NFTs That Do Something*), a separate project.
+Also by the same builder: **RSVPay** (Amplop Balas, track *NFTs That Do Something*, https://rsvpay.vercel.app), a separate project with separate code. It is named here because the rules ask each README to name the other.
 
 ![Rice Fields seen from behind the player: straw huts, villagers with swap bubbles, the sea behind](docs/screenshot.jpg)
 
