@@ -33,7 +33,7 @@ The shipwright contract is not deployed yet. The deployed contract is older and 
 - No guest has paid on testnet yet, so the time per action on testnet is unmeasured.
 - Six newer Rust tests in `contract/src/lib.rs` have not run on the builder's machine. CI runs them.
 - Fishing and barter with villagers stay in the browser. The chain can prove what the shipyard accepted and burned, not that you caught the fish.
-- Esther reported that she could not get the boat moving, and Rosa enjoyed the idea but found the loop repetitive. Neither has tried these latest changes; the 20/20 simulation does not prove human usability or replay value.
+- On 6 November an outside tester could not get the boat moving; after the 7 November changes the same tester reported sailing twice (self-reported, no timing). On 12 and 13 November two outside students tested on phones: one saw no lag on a Samsung Galaxy A55, one rated it 4/5 for fun, and both said the loop gets repetitive. No time to first sail was measured. The 20/20 simulation does not prove human usability or replay value.
 - The latest 360px layout and daily mode have not been tried in a browser or by a human in this verification session. UI function tests use Node stand-ins, not a rendered page.
 - Daily scores are local attempts only, editable and dependent on the device clock; there is no shared leaderboard or server verification.
 - The contract is not audited.

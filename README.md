@@ -9,6 +9,8 @@ Mintless is the opposite. You wash up on an island with no coins and a broken bo
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
 Also by the same builder: **RSVPay** (Amplop Balas, track *NFTs That Do Something*, https://rsvpay.vercel.app), a separate project with separate code. It is named here because the rules ask each README to name the other.
 
+> **What you play and what is on chain.** The game you play runs in the browser. The NEAR testnet contract is a verifiable copy of the same rules (it runs seed 1; the first island you play uses seed 7). Paying for the boat is not live on chain yet. Details: [CLAIMS.md](CLAIMS.md) and [Honest limits](#honest-limits).
+
 ![Rice Fields seen from behind the player: straw huts, villagers with swap bubbles, the sea behind](docs/screenshot.jpg)
 
 *A village in third person. Green bubbles show who can swap with you right now. The camera glides out to a 3/4 view on the road and down to first person when you fish.*
@@ -92,7 +94,7 @@ Salt Town is the tutorial and the proof: its rules are fixed, so the claims abov
 
 ## The game loop
 
-Five rounds of testing by one player, the builder, shaped this. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
+Five rounds of testing by one player, the builder, shaped this. Two outside students then tried it on phones on 12 and 13 November (one on a Samsung Galaxy A55 with no lag, one rating it 4/5 for fun); both said the loop gets repetitive after the first sail. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
 
 **Goal: fix four boat parts before the tenth night.** Your first island pays about half and has no deadline, so a first run reaches the sail; every island after that is the full game. Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
 
@@ -154,6 +156,7 @@ All code in this repository was written from 3 November 2026 on, during the even
 - The town does not react to the player: your swaps last until dusk, then every trader goes back to what they held at dawn. That keeps the town's path a pure function of rules and seed, which is what lets the contract recompute it. The town stall is the only market on chain. The stall's own stock does not spoil.
 - Prices are the traders' average notebook values (1 to 100), a measure of tradeability, not a market-clearing price.
 - Testnet only, not audited, one town with five goods by design.
+- Outside feedback so far (two students, no names here): the loop gets repetitive after the first sail, fish are limited per day, weather was hard to see (the screen now shows a storm countdown from day 1), and one tester found portrait easier on a phone. These are open, not fixed.
 - Prior art: the browser game *WTH Is Money?* (loathwine, Oct 2026) teaches the same idea with a village barter market; it is not on chain. Agent-based emergence of money is classic research (Marimon, McGrattan and Sargent 1990). What is new here is a playable town where the emergence runs inside a contract nobody controls.
 
 ## Repo map
@@ -195,6 +198,8 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 ## Team
 
 Dex Bennett (solo), Information Systems student, Universitas Kristen Duta Wacana, Yogyakarta.
+
+Testers, not co-authors: two Information Systems students from the same faculty played it on their phones and gave the feedback listed under Honest limits.
 
 ## License
 

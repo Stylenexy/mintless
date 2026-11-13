@@ -2471,6 +2471,11 @@ function renderHud() {
     const left = stormDay() - dayNum();
     chip.innerHTML = `Storm ${left > 0 ? `in ${left} day${left > 1 ? "s" : ""}` : "tonight"}: soaks ${pic(rainGood())} ${GOODS[rainGood()]}`;
     chip.classList.remove("hidden");
+  } else if (ev && !raining() && !S.night) {
+    // Before the town has picked a good to soak, still say that weather is coming.
+    const left = stormDay() - dayNum();
+    chip.innerHTML = `Storm ${left > 0 ? `in ${left} day${left > 1 ? "s" : ""}` : "tonight"}<span class="long">: it soaks what the town hoards most</span>`;
+    chip.classList.remove("hidden");
   } else chip.classList.add("hidden");
   renderBag();
   drawKeys();
