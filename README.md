@@ -1,15 +1,22 @@
-**Play it now, no install, no account: https://mintless-island.vercel.app** (works on a phone) | [Watch the 1-minute demo](https://mintless-island.vercel.app/mintless-demo.mp4) | [Report an issue](https://github.com/Stylenexy/mintless/issues)
-
 # Mintless: the town that picks its own money
 
-In 2016 one Growtopia Diamond Lock sold for Rp100,000 (about $6). In 2026 it sells for Rp299 (about $0.02): savings in a game currency, gone, because someone kept printing.
+**Fish, barter, rebuild your boat. Read the market before your savings stop buying anything.**
 
-Mintless is the opposite. You wash up on an island with no coins and a broken boat. 40 villagers barter salt, fish, rice, cloth and wood, and within days they all start taking one good: money, born on its own. You save it for your boat. Then a storm rots it, the town moves on to cloth, and your savings stop being money overnight. Nobody decided that, and nobody, including the developer, can print a single extra unit. The town did it, and reading the town could have saved you.
+You wash up on an island with no coins and a broken boat. Forty villagers trade salt, fish, rice, cloth and wood. As they learn what others accept, one good becomes money. You save it for repairs. Then a storm changes what lasts, the villagers change what they accept, and the shipwright asks for a different good. Your next move is an economic decision you can see and play.
+
+[Play in your browser](https://mintless-island.vercel.app) · [Watch the 65-second demo](https://mintless-island.vercel.app/mintless-demo.mp4) · [Verify the evidence](#judges-one-command) · [Meet the team](#team)
 
 NEAR Hackathon 2026 · track **Games With Real Economies** · testnet only · no real money, no betting.
-Also by the same builder: **RSVPay** (Amplop Balas, track *NFTs That Do Something*, https://rsvpay.vercel.app), a separate project with separate code. It is named here because the rules ask each README to name the other.
 
-> **What you play and what is on chain.** The game you play runs in the browser. The NEAR testnet contract is a verifiable copy of the same rules (it runs seed 1; the first island you play uses seed 7). Paying for the boat is not live on chain yet. Details: [CLAIMS.md](CLAIMS.md) and [Honest limits](#honest-limits).
+## What is live
+
+| Part | Status | What you can verify |
+|---|---|---|
+| 3D island game | **Playable**, desktop and phone, no install or account | Fish, trade with villagers, repair the boat, experience the storm and sail. The game runs locally in your browser. |
+| NEAR economy contract | **Live on testnet** | Forty traders follow the public rules. Anyone can advance the town. The account has zero access keys; the rules hash and state match a local replay. Token supply is fixed at genesis and can only decrease. |
+| Boat payments on NEAR | **Implemented, not deployed** | Rust tests and a compiled-Wasm check cover payment rules. The deployed contract has no `build` method; the playable game does not submit boat payments. |
+
+The browser's first island uses seed 7; the deployed proof town uses seed 1. They share Salt Town's rules, not a shared save. [Full claims and checks](CLAIMS.md).
 
 ![Rice Fields seen from behind the player: straw huts, villagers with swap bubbles, the sea behind](docs/screenshot.jpg)
 
@@ -19,17 +26,19 @@ Also by the same builder: **RSVPay** (Amplop Balas, track *NFTs That Do Somethin
 
 ## Judges: one command
 
-Needs Node 20 or newer. No install, no keys, no account.
+Use Node.js 24, the version used in CI. No npm packages, keys or account are needed for this check.
 
-```
+```sh
+git clone https://github.com/Stylenexy/mintless.git
+cd mintless
 npm run judge
 ```
 
-It runs, in about 15 seconds:
+The command runs:
 
 1. `npm test`: 70 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, player rules, newcomer guidance, daily islands, local rankings and the offline bundle).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
-3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals the sha256 of the Salt Town rules in `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
+3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals the sha256 of the Salt Town rules in `rules/town.js`, and that its current state equals what your local engine computes for the same day. An unavailable RPC prints `SKIPPED` and exits successfully; **only three `PASS` lines verify the live chain**, so inspect the output as well as the exit code.
 
 Expected output (abridged):
 
@@ -47,19 +56,35 @@ PASS | rules hash on chain = sha256 of the Salt Town rules in rules/town.js
 PASS | day 30: chain fingerprint 172d8ea0 = local engine replay; money = cloth
 ```
 
-To play: `npm start`, then open http://localhost:5173 (a season of 10 days takes about 15 minutes, on a laptop or a phone). In a hurry? Open http://localhost:5173/?demo and press *Jump to the storm*: it puts you on day 6 with savings in hand, about 30 seconds before they stop being money. No Node? `npm run bundle` writes `dist/mintless.html`, one file that opens in any browser. The dashboard with the rules, the what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
+To play locally, run `npm start` and open http://localhost:5173. A ten-day run takes about 15 minutes; the introductory island has no deadline. For the short version, open http://localhost:5173/?demo and press *Jump to the storm*: it puts you on day 6 with savings in hand, about 30 seconds before they stop being money.
+
+Without Node, use the [hosted game](https://mintless-island.vercel.app), including on a phone. For a portable copy, run `npm run bundle` with Node: it writes `dist/mintless.html`, which can then open directly in a browser without a server. The local dashboard with rules, what-if switches and the live chain proof is at http://localhost:5173/web/lab.html.
+
+### A short review path
+
+| Do this | Look for this |
+|---|---|
+| Open [the game](https://mintless-island.vercel.app) and press **Play** | One newcomer island with reduced repair costs, fishing, visible swap offers and a boat to rebuild. |
+| Open [the storm shortcut](https://mintless-island.vercel.app/?demo), then **Jump to the storm** | A countdown followed by the morning bill: your stored good loses buying power and the shipwright changes what it accepts. |
+| Run `npm run proof` | Salt becomes money in 500/500 seeds; after the public weather change, cloth replaces it in 500/500. |
+| Run `npm run verify:chain` | Three `PASS` lines: zero keys, matching rules hash, matching state fingerprint and prices. |
 
 **Daily island:** after your first sail, the title screen also offers *Daily island* (the same island for everyone, seeded from the UTC date, full prices, ten days) and *Mystery island*. A local top ten per date is kept in this browser only: no server, no shared scores, and it can be edited.
 
 ## Why this exists
 
-In 2016 one Diamond Lock, the currency of the sandbox MMO Growtopia, sold for about Rp100,000 in Indonesia. In June 2026 the cheapest listing was Rp299: down 99.7%, while Indonesian consumer prices rose 28.5% over the same years. The game kept minting currency (locks bought with gems, gem packs sold and raised almost every year), and players who saved in it lost almost everything. I grew up trading in that economy.
-
-Price points (lowest seller listings): Dec 2015 Rp185,000 · Dec 2016 Rp100,000 · Sep 2017 Rp45,000 · Dec 2019 Rp26,000 · Nov 2021 Rp10,000 · Sep 2023 Rp4,000 · Nov 2025 Rp501 · Jun 2026 Rp299. Sources: seller blog comments 2015–2018, itemku listings 2019–2026 via archive.org snapshots, CPI from the World Bank (FP.CPI.TOTL). Rp299 is the cheapest listing of that month; other sellers ask more (one price list claimed Rp5,000, which we could not verify). Even at Rp5,000 the fall is 95%.
+The starting point was Growtopia, a game Dex grew up trading in. Saving in a game currency makes its rules personal: a change in what that currency buys changes what your time was worth.
 
 Mintless asks the opposite question: what does a game economy look like when nobody can print, and the money is whatever the players and traders actually accept?
 
-What a blockchain fixes here, honestly: the rules and the supply cannot be changed quietly, and there is no one left who can mint. What it does not fix: bots. This repo makes no claim about bots.
+NEAR makes the economy independently inspectable. On the deployed contract, the rules and token supply are committed, the final access key is gone, and anyone can advance the town. The browser game gives that experiment a playable setting. The contract does not establish the authenticity of browser catches or prevent bots.
+
+<details>
+<summary>Growtopia price references used in the demo</summary>
+
+Price points (lowest seller listings): Dec 2015 Rp185,000 · Dec 2016 Rp100,000 · Sep 2017 Rp45,000 · Dec 2019 Rp26,000 · Nov 2021 Rp10,000 · Sep 2023 Rp4,000 · Nov 2025 Rp501 · Jun 2026 Rp299. Sources: seller blog comments 2015–2018, itemku listings 2019–2026 via archive.org snapshots. Rp299 is the cheapest listing of that month; other sellers ask more. These are historical asking prices used as motivation, not a transaction-weighted market index or proof of what caused the change.
+
+</details>
 
 ## How money emerges (no LLM, no hard-coded currency)
 
@@ -94,9 +119,9 @@ Salt Town is the tutorial and the proof: its rules are fixed, so the claims abov
 
 ## The game loop
 
-Five rounds of testing by one player, the builder, shaped this. Then the team played it: Esther on 5 and 7 November, Rosa on 7 November, and Michelle and Esther on phones on 12 and 13 November (Esther on a Samsung Galaxy A55 with no lag, Michelle rating it 4/5 for fun); both said the loop gets repetitive after the first sail. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
+Mintless grew through several playable versions and team feedback. An early market dashboard was hard to understand; a 2D town made trades clearer but gave players little to lose. The island version gives the economy a concrete goal: get your boat back. Playtesting then shaped the first voyage, route guidance, daily islands and storm visibility. [Our team](#team) connects those changes to the people behind them. Earlier versions remain in `web/2d/` and `web/v4/`; the dashboard became the lab page.
 
-**Goal: fix four boat parts before the tenth night.** Your first island pays about half and has no deadline, so a first run reaches the sail; every island after that is the full game. Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
+**Goal: fix four boat parts before the tenth night.** Your first island charges 60% of each part's normal price, rounded up, and has no deadline. Later islands use full prices and a ten-night limit. Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
 
 - **Fish.** Walk to a pier and the camera glides into first person. Cast at the ripples, watch the float, strike when it plunges, then pull against the fish with A and D. Skill alone decides the catch; there are no dice. Nine species, one of which only bites in the storm.
 - **Swap.** Villagers show what they want and what they give. A green bubble means they can swap with you; press E and the goods fly across. There are no coins and no menus: goods for goods, judged by the same `willTake` rule the villagers use with each other. On day 1 a fish takes four swaps across the island to become salt. By day 3 it takes one. That is what money does.
@@ -148,7 +173,7 @@ Not implemented on purpose: NEP-245 approvals and `*_transfer_call`. Transfers g
 
 ## Built during the hackathon
 
-All code in this repository was written from 3 November 2026 on, during the event (1–14 Nov). The git history shows the order: engine and tests first, then the browser game, then the contract and the testnet run.
+Mintless's original engine, game, contract, tests and scripts were developed from 3 November 2026 on, during the event (1–14 Nov). The git history shows the order: engine and tests first, then the browser game, then the contract and the testnet run. Third-party libraries are listed below.
 
 ## Honest limits
 
@@ -156,7 +181,7 @@ All code in this repository was written from 3 November 2026 on, during the even
 - The town does not react to the player: your swaps last until dusk, then every trader goes back to what they held at dawn. That keeps the town's path a pure function of rules and seed, which is what lets the contract recompute it. The town stall is the only market on chain. The stall's own stock does not spoil.
 - Prices are the traders' average notebook values (1 to 100), a measure of tradeability, not a market-clearing price.
 - Testnet only, not audited, one town with five goods by design.
-- Feedback from Rosa, Michelle and Esther so far: the loop gets repetitive after the first sail, fish are limited per day, weather was hard to see (the screen now shows a storm countdown from day 1), and one tester found portrait easier on a phone. These are open, not fixed.
+- Replay value is the main open design issue: team feedback found the loop repetitive after the first sail and daily catches restrictive. Storm visibility received a concrete improvement, a countdown from day 1. Reports from two phone models are useful playtest observations, not a broad device benchmark; time to first sail has not been measured.
 - Prior art: the browser game *WTH Is Money?* (loathwine, Oct 2026) teaches the same idea with a village barter market; it is not on chain. Agent-based emergence of money is classic research (Marimon, McGrattan and Sargent 1990). What is new here is a playable town where the emergence runs inside a contract nobody controls.
 
 ## Repo map
@@ -197,16 +222,20 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 
 ## Team
 
-Four Information Systems students at Universitas Kristen Duta Wacana, Yogyakarta. Dex wrote the code with AI coding assistants; Rosa, Michelle and Esther shaped what the game became by playing every rough build and telling us what broke. Their notes changed the game, so here is what each one changed.
+We are four Information Systems students at Universitas Kristen Duta Wacana, Yogyakarta. We built Mintless through engineering, game design and playtesting. Ideas became features, confusing moments became design changes, and each round of play gave us the next thing to improve.
 
-| Who | Role | What they changed in the game |
+| Team member | Focus | Contributions |
 |---|---|---|
-| **Dex Bennett** | Lead, builder | Economy engine, NEAR contract, 3D game, proofs, video. |
-| **Rosa** | Game design, playtesting | Proposed the **daily island**: one island for everyone each day, with a local top ten (shipped). Asked for fish that depend on time and weather, which became **golden hour** and the **Lantern Puffer**, a fish that only bites then (shipped). Asked for a warning before the storm. Said the loop gets boring once you know it, which is still our biggest open problem. |
-| **Michelle** | Playtesting, design feedback | Rated it 4/5 for fun on an Oppo Reno 10 5G, found fishing addictive and the storm hard to see. That is why the **storm countdown now shows from day 1** and the goods sit at the top of the screen (shipped). Also found it easier to play in portrait on a phone. |
-| **Esther** | First outside player, playtesting | First person outside the team to play (5 Nov). She found that the guide trail **doubled back behind the player**; we measured it on 37.8% of road positions and rewrote the route. She could not get the boat moving, which led to the whole **first-player rework**: a cheaper first island, a marker over the next stop, wider villager spacing, and drag to turn anywhere. After that she sailed twice. Later checked it on a Samsung Galaxy A55 with no lag and asked for goods icons at the top (shipped). |
+| **Dex Bennett** | Project direction and engineering | Led the project and implemented the economy simulation, NEAR contract and 3D island. Built the automated evidence checks and produced the demo video. Turned the team's design ideas and playtest findings into successive playable builds. |
+| **Rosa** | Game design and replay feedback | Proposed **Daily island**, giving everyone the same island each day with a local top ten. Her ideas for time- and weather-dependent fishing informed **golden hour** and the **Lantern Puffer**. Called for advance storm warnings and identified repetition after the first sail. |
+| **Michelle** | Mobile playtesting and game feedback | Tested on an **Oppo Reno 10 5G**, assessed the fishing loop and found that the approaching storm was too easy to miss. Her feedback informed the **storm countdown from day 1** and clearer inventory placement, with portrait play as a mobile usability finding. |
+| **Esther** | New-player experience and playtesting | Identified a route guide that doubled back and obstacles to completing the first voyage. Her playtests informed the **onboarding rework**: reduced first-island costs, destination markers, wider villager spacing and drag-to-turn controls. Tested again on a **Samsung Galaxy A55** and suggested more visible inventory icons. |
 
-Rosa, Michelle and Esther did not write code. Without them this would still be a game only its builder could finish.
+The daily challenge, fishing rhythm, storm warning and first-voyage guidance all carry the team's input. Our next design challenge is making the second sail as interesting as the first.
+
+## Related project
+
+Dex also built **[RSVPay](https://github.com/Stylenexy/rsvpay)** (Amplop Balas), submitted separately to *NFTs That Do Something*. It is an independent project with separate code. [Try RSVPay](https://rsvpay.vercel.app).
 
 ## License
 
