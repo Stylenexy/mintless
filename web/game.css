@@ -253,6 +253,9 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 7p
   .slot .count { font-size: 19px; }
   .toast { bottom: 96px; }
   .tip { bottom: 140px; }
+  /* keep the morning bill and place names clear of the goods strip */
+  .banner { top: max(15%, 186px); }
+  .place { top: max(19%, 196px); }
 }
 
 /* Portrait phones: the storm note goes under the goods column so it never covers the goal card. */
