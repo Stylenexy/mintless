@@ -94,7 +94,7 @@ Salt Town is the tutorial and the proof: its rules are fixed, so the claims abov
 
 ## The game loop
 
-Five rounds of testing by one player, the builder, shaped this. Two outside students then tried it on phones on 12 and 13 November (one on a Samsung Galaxy A55 with no lag, one rating it 4/5 for fun); both said the loop gets repetitive after the first sail. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
+Five rounds of testing by one player, the builder, shaped this. Then the team played it: Esther on 5 and 7 November, Rosa on 7 November, and Michelle and Esther on phones on 12 and 13 November (Esther on a Samsung Galaxy A55 with no lag, Michelle rating it 4/5 for fun); both said the loop gets repetitive after the first sail. A market dashboard was not understood. A 2D town was too crowded, then clear but empty: nothing could be lost. A block world had no goal you could follow. Earlier versions live on at `web/2d/` and `web/v4/`, the dashboard as the lab page.
 
 **Goal: fix four boat parts before the tenth night.** Your first island pays about half and has no deadline, so a first run reaches the sail; every island after that is the full game. Each part is priced in whatever the town accepts most that day, so the same hull costs 4 salt today and 4 cloth after the money moves.
 
@@ -156,7 +156,7 @@ All code in this repository was written from 3 November 2026 on, during the even
 - The town does not react to the player: your swaps last until dusk, then every trader goes back to what they held at dawn. That keeps the town's path a pure function of rules and seed, which is what lets the contract recompute it. The town stall is the only market on chain. The stall's own stock does not spoil.
 - Prices are the traders' average notebook values (1 to 100), a measure of tradeability, not a market-clearing price.
 - Testnet only, not audited, one town with five goods by design.
-- Outside feedback so far (two students, no names here): the loop gets repetitive after the first sail, fish are limited per day, weather was hard to see (the screen now shows a storm countdown from day 1), and one tester found portrait easier on a phone. These are open, not fixed.
+- Feedback from Rosa, Michelle and Esther so far: the loop gets repetitive after the first sail, fish are limited per day, weather was hard to see (the screen now shows a storm countdown from day 1), and one tester found portrait easier on a phone. These are open, not fixed.
 - Prior art: the browser game *WTH Is Money?* (loathwine, Oct 2026) teaches the same idea with a village barter market; it is not on chain. Agent-based emergence of money is classic research (Marimon, McGrattan and Sargent 1990). What is new here is a playable town where the emergence runs inside a contract nobody controls.
 
 ## Repo map
@@ -197,9 +197,16 @@ npm run deploy:testnet     # new throwaway town, played and locked; add -- --kee
 
 ## Team
 
-Dex Bennett (solo), Information Systems student, Universitas Kristen Duta Wacana, Yogyakarta.
+Four Information Systems students at Universitas Kristen Duta Wacana, Yogyakarta. Dex wrote the code with AI coding assistants; Rosa, Michelle and Esther shaped what the game became by playing every rough build and telling us what broke. Their notes changed the game, so here is what each one changed.
 
-Testers, not co-authors: two Information Systems students from the same faculty played it on their phones and gave the feedback listed under Honest limits.
+| Who | Role | What they changed in the game |
+|---|---|---|
+| **Dex Bennett** | Lead, builder | Economy engine, NEAR contract, 3D game, proofs, video. |
+| **Rosa** | Game design, playtesting | Proposed the **daily island**: one island for everyone each day, with a local top ten (shipped). Asked for fish that depend on time and weather, which became **golden hour** and the **Lantern Puffer**, a fish that only bites then (shipped). Asked for a warning before the storm. Said the loop gets boring once you know it, which is still our biggest open problem. |
+| **Michelle** | Playtesting, design feedback | Rated it 4/5 for fun on an Oppo Reno 10 5G, found fishing addictive and the storm hard to see. That is why the **storm countdown now shows from day 1** and the goods sit at the top of the screen (shipped). Also found it easier to play in portrait on a phone. |
+| **Esther** | First outside player, playtesting | First person outside the team to play (5 Nov). She found that the guide trail **doubled back behind the player**; we measured it on 37.8% of road positions and rewrote the route. She could not get the boat moving, which led to the whole **first-player rework**: a cheaper first island, a marker over the next stop, wider villager spacing, and drag to turn anywhere. After that she sailed twice. Later checked it on a Samsung Galaxy A55 with no lag and asked for goods icons at the top (shipped). |
+
+Rosa, Michelle and Esther did not write code. Without them this would still be a game only its builder could finish.
 
 ## License
 
