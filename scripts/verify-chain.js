@@ -39,7 +39,7 @@ try {
   say(keys.keys.length === 0, `access keys on the contract account: ${keys.keys.length} (nobody can redeploy, upgrade or add a mint)`);
   const town = await call("town");
   const hash = createHash("sha256").update(JSON.stringify(SALT_TOWN)).digest("hex");
-  say(town.rules_hash === hash, `rules hash on chain = sha256(rules/town.js) = ${hash.slice(0, 16)}…`);
+  say(town.rules_hash === hash, `rules hash on chain = sha256 of the Salt Town rules in rules/town.js = ${hash.slice(0, 16)}…`);
   const local = run(createTown(SALT_TOWN, town.seed), town.day);
   const fp = await call("fingerprint");
   say(fp === stateHash(local) && JSON.stringify(town.prices) === JSON.stringify(prices(local)), `day ${town.day}: chain fingerprint ${fp} = local engine replay; money = ${town.money ?? "none yet"}`);

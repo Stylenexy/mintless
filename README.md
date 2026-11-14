@@ -1,8 +1,8 @@
-**Play it now, no install, no account: https://mintless-island.vercel.app** (works on a phone) | [Report an issue](https://github.com/Stylenexy/mintless/issues)
+**Play it now, no install, no account: https://mintless-island.vercel.app** (works on a phone) | [Watch the 1-minute demo](https://mintless-island.vercel.app/mintless-demo.mp4) | [Report an issue](https://github.com/Stylenexy/mintless/issues)
 
 # Mintless: the town that picks its own money
 
-In 2016 one Growtopia Diamond Lock sold for Rp100,000. In 2026 it sells for Rp299: savings in a game currency, gone, because someone kept printing.
+In 2016 one Growtopia Diamond Lock sold for Rp100,000 (about $6). In 2026 it sells for Rp299 (about $0.02): savings in a game currency, gone, because someone kept printing.
 
 Mintless is the opposite. You wash up on an island with no coins and a broken boat. 40 villagers barter salt, fish, rice, cloth and wood, and within days they all start taking one good: money, born on its own. You save it for your boat. Then a storm rots it, the town moves on to cloth, and your savings stop being money overnight. Nobody decided that, and nobody, including the developer, can print a single extra unit. The town did it, and reading the town could have saved you.
 
@@ -29,7 +29,7 @@ It runs, in about 15 seconds:
 
 1. `npm test`: 70 checks over 500 Salt Towns and 760 mystery towns (determinism, money emerges, one rule change switches it, controls, player rules, newcomer guidance, daily islands, local rankings and the offline bundle).
 2. `npm run proof`: prints one town day by day, then the same claims measured over 500 seeds.
-3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
+3. `npm run verify:chain`: reads the live testnet contract (read-only) and checks it has zero access keys, that its rules hash equals the sha256 of the Salt Town rules in `rules/town.js`, and that its current state equals what your local engine computes for the same day. Offline, this step prints `SKIPPED` instead of failing.
 
 Expected output (abridged):
 
@@ -43,7 +43,7 @@ Expected output (abridged):
   salt became money in 500/500 towns, median day 3, latest day 11
   after the rain, cloth replaced it in 500/500 towns, median 3 days, slowest 6
 PASS | access keys on the contract account: 0
-PASS | rules hash on chain = sha256(rules/town.js)
+PASS | rules hash on chain = sha256 of the Salt Town rules in rules/town.js
 PASS | day 30: chain fingerprint 172d8ea0 = local engine replay; money = cloth
 ```
 

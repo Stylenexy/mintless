@@ -10,7 +10,7 @@ Every claim this project makes, and how to check it yourself. If a check fails, 
 | One rule change moves the money | `npm run proof` | after the rain, cloth replaced salt in 500 of 500 towns |
 | A played season does not change the town's path | `test/chain-play.test.js` | same state hash as an untouched town every night |
 | The deployed contract has no access keys | `npm run verify:chain` | 0 keys on `mintless-mvznw81o.testnet` |
-| The rules on chain are the rules in this repo | `npm run verify:chain` | hash on chain = sha256 of `rules/town.js` |
+| The rules on chain are the rules in this repo | `npm run verify:chain` | hash on chain = sha256 of the Salt Town rules object in `rules/town.js` |
 | The chain town walks the same path as the local engine | `npm run verify:chain` | fingerprint and money match on day 30 |
 | The browser signer is correct | `test/chain-play.test.js` | same bytes as `near-api-js` 7.4 |
 | The newcomer simulation independently repeats the previous result | `test/newcomer.test.js` | old full prices: 0/20 sail; first voyage: 20/20, on nights 7 or 8; timings remain estimates |
